@@ -1,9 +1,10 @@
+// server/routes/authRoutes.js
 import express from 'express';
 import {
   register,
   login,
   forgotPassword,
-  resetPassword
+  resetPassword,
 } from '../controllers/authController.js';
 
 const router = express.Router();

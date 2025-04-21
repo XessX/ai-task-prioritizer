@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const api = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const api = import.meta.env.VITE_API_URL;
 
 function App() {
   const [user, setUser] = useState(null);
@@ -138,12 +138,12 @@ function App() {
     setTasks([]);
   };
 
-  useEffect(() => {
-    if ((token && !guestMode) || guestMode) {
-      fetchTasks();
-    }
-  }, [guestMode]);
-  
+useEffect(() => {
+  if ((token && !guestMode) || guestMode) {
+    fetchTasks();
+  }
+}, [guestMode]);
+
 
   // ---------------- AUTH UI ----------------
   if (!user && !guestMode) {

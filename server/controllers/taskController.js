@@ -1,11 +1,9 @@
 // server/controllers/taskController.js
-
 import { PrismaClient } from '@prisma/client';
 import { classifyTaskPriority } from '../services/aiClassifier.js';
 
 const prisma = new PrismaClient();
 
-// 🟢 FETCH TASKS FOR AUTHENTICATED USER
 export const getTasks = async (req, res) => {
   try {
     const tasks = await prisma.task.findMany({
@@ -14,71 +12,56 @@ export const getTasks = async (req, res) => {
     });
     res.json(tasks);
   } catch (err) {
-    console.error('❌ Error getting tasks:', err);
-    res.status(500).json({ error: 'Failed to fetch tasks' });
+    console.error('❌ Fetch error:', err);
+    res.status(500).json({ error: 'Fetch failed' });
   }
 };
 
-// 🟢 CREATE TASK WITH AI PRIORITY
 export const createTask = async (req, res) => {
   const { title, description } = req.body;
-  const userId = req.user?.userId;
+  const userId = req.user.userId;
 
-  if (!title || !description || !userId) {
-    return res.status(400).json({ error: 'Missing fields or unauthenticated' });
-  }
+  if (!title || !description) return res.status(400).json({ error: 'Missing fields' });
 
   try {
     const priority = await classifyTaskPriority(title, description);
 
     const task = await prisma.task.create({
-      data: {
-        title,
-        description,
-        priority,
-        userId,
-      },
+      data: { title, description, priority, userId },
     });
 
     res.status(201).json(task);
-  } catch (error) {
-    console.error('❌ Error creating task:', error);
-    res.status(500).json({ error: 'Failed to create task' });
-  }
-};
-
-// 🟢 DELETE TASK
-export const deleteTask = async (req, res) => {
-  const id = req.params.id;
-
-  try {
-    await prisma.task.delete({
-      where: {
-        id,
-      },
-    });
-
-    res.status(204).send();
   } catch (err) {
-    console.error('❌ Error deleting task:', err);
-    res.status(500).json({ error: 'Failed to delete task' });
+    console.error('❌ Create task error:', err);
+    res.status(500).json({ error: 'Create failed' });
   }
 };
 
-// 🟢 UPDATE TASK
 export const updateTask = async (req, res) => {
   const id = req.params.id;
   const { title, description } = req.body;
 
   try {
-    const updatedTask = await prisma.task.update({
+    const task = await prisma.task.update({
       where: { id },
       data: { title, description },
     });
 
-    res.json(updatedTask);
+    res.json(task);
   } catch (err) {
-    console.error('❌ Error updating task:', err);
-    res.status(500).json({ error: 'Failed to update task' });
+    console.error('❌ Update error:', err);
+    res.status(500).json({ error: 'Update failed' });
+  }
+};
+
+export const deleteTask = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    await prisma.task.delete({ where: { id } });
+    res.status(204).send();
+  } catch (err) {
+    console.error('❌ Delete error:', err);
+    res.status(500).json({ error: 'Delete failed' });
   }
 };
