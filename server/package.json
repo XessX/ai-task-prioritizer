@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "build": "prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -21,8 +23,7 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.10.1",
-    "openai": "^4.95.1",
-    "prisma": "^6.6.0"
+    "openai": "^4.95.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.9",
