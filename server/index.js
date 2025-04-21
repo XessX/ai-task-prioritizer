@@ -10,10 +10,18 @@ dotenv.config();
 
 const app = express();
 
+import cors from 'cors';
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://ai-task-prioritizer.vercel.app',
+];
+
 app.use(cors({
-  origin: [process.env.CLIENT_URL, 'http://localhost:5173'], // local + production
+  origin: allowedOrigins,
   credentials: true,
 }));
+
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
