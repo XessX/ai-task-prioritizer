@@ -27,17 +27,14 @@ function App() {
     } else {
       try {
         const res = await axios.get(`${api}/tasks`, { headers: getHeaders() });
-        const data = res.data;
-  
-        // Ensure data is an array
-        setTasks(Array.isArray(data) ? data : []);
+        setTasks(Array.isArray(res.data) ? res.data : []);
       } catch (error) {
         console.error('❌ Failed to fetch tasks:', error.message);
-        setTasks([]); // fallback to empty
+        setTasks([]);
+        if (error.response?.status === 401) logout(); // token expired
       }
     }
   };
-  
 
   const saveGuestTasks = (tasksToSave) => {
     localStorage.setItem('guest_tasks', JSON.stringify(tasksToSave));
@@ -66,16 +63,11 @@ function App() {
 
     try {
       if (editId) {
-        await axios.put(`${api}/tasks/${editId}`, form, {
-          headers: getHeaders(),
-        });
+        await axios.put(`${api}/tasks/${editId}`, form, { headers: getHeaders() });
         setEditId(null);
       } else {
-        await axios.post(`${api}/tasks`, form, {
-          headers: getHeaders(),
-        });
+        await axios.post(`${api}/tasks`, form, { headers: getHeaders() });
       }
-
       setForm({ title: '', description: '' });
       fetchTasks();
     } catch (error) {
@@ -93,9 +85,7 @@ function App() {
     }
 
     try {
-      await axios.delete(`${api}/tasks/${id}`, {
-        headers: getHeaders(),
-      });
+      await axios.delete(`${api}/tasks/${id}`, { headers: getHeaders() });
       fetchTasks();
     } catch (error) {
       alert('❌ Error deleting task');
@@ -138,12 +128,15 @@ function App() {
     setTasks([]);
   };
 
-useEffect(() => {
-  if ((token && !guestMode) || guestMode) {
-    fetchTasks();
-  }
-}, [guestMode]);
-
+  // Check token existence on load
+  useEffect(() => {
+    if (token && !guestMode) {
+      setUser({}); // placeholder user object to activate UI
+      fetchTasks();
+    } else if (guestMode) {
+      fetchTasks();
+    }
+  }, [guestMode]);
 
   // ---------------- AUTH UI ----------------
   if (!user && !guestMode) {

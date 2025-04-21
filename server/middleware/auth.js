@@ -1,13 +1,11 @@
-// server/middleware/auth.js
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 dotenv.config();
 
 export const requireAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
-
   if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Unauthorized - No token' });
+    return res.status(401).json({ message: 'Unauthorized - Missing token' });
   }
 
   const token = authHeader.split(' ')[1];
@@ -17,6 +15,6 @@ export const requireAuth = (req, res, next) => {
     req.user = decoded;
     next();
   } catch {
-    res.status(401).json({ message: 'Invalid token' });
+    return res.status(401).json({ message: 'Invalid token' });
   }
 };

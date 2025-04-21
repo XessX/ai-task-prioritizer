@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+const api = import.meta.env.VITE_API_URL;
+
 function ResetPassword() {
   const { token } = useParams();
   const navigate = useNavigate();
@@ -24,7 +26,7 @@ function ResetPassword() {
 
     try {
       setLoading(true);
-      await axios.post('http://localhost:5000/api/auth/reset-password', {
+      await axios.post(`${api}/auth/reset-password`, {
         token,
         password,
       });
@@ -32,6 +34,7 @@ function ResetPassword() {
       alert('✅ Password reset successful. You can now log in.');
       navigate('/');
     } catch (err) {
+      console.error('❌ Reset failed:', err);
       alert('❌ Failed to reset password. Try again or request a new link.');
     } finally {
       setLoading(false);
@@ -39,9 +42,9 @@ function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen flex justify-center items-center bg-gray-100 px-4">
-      <div className="w-full max-w-sm bg-white p-6 rounded shadow-lg">
-        <h1 className="text-2xl font-bold mb-4 text-center">🔑 Reset Password</h1>
+    <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-blue-100 via-white to-purple-100 px-4">
+      <div className="w-full max-w-sm bg-white p-6 rounded-lg shadow-xl">
+        <h1 className="text-2xl font-bold mb-4 text-center">🔐 Reset Password</h1>
 
         <form onSubmit={handleReset} className="space-y-4">
           <input

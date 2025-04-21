@@ -11,7 +11,7 @@ export const classifyTaskPriority = async (title, description) => {
 You are an AI that classifies task priority: high, medium, or low.
 Title: ${title}
 Description: ${description}
-Respond ONLY with: high, medium, or low.
+Respond ONLY with one word: high, medium, or low.
 `;
 
     const result = await openai.chat.completions.create({
