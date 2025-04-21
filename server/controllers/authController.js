@@ -33,25 +33,28 @@ export const register = async (req, res) => {
 
 // 🟢 LOGIN
 export const login = async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
-
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-      expiresIn: '1d',
-    });
-
-    res.json({ token });
-  } catch (err) {
-    console.error('❌ Login error:', err);
-    res.status(500).json({ error: 'Login failed' });
-  }
-};
+    try {
+      console.log('Login request received:', req.body); // 👈 LOG THIS
+  
+      const { email, password } = req.body;
+  
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+  
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
+  
+      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+        expiresIn: '1d',
+      });
+  
+      res.json({ token });
+    } catch (err) {
+      console.error('❌ Login error:', err); // 👈 MUST LOG ERROR
+      res.status(500).json({ error: 'Login failed' });
+    }
+  };
+  
 
 // 🟢 FORGOT PASSWORD
 export const forgotPassword = async (req, res) => {
