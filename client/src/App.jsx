@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const api = import.meta.env.VITE_API_URL;
+const api = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -23,16 +23,21 @@ function App() {
   const fetchTasks = async () => {
     if (guestMode) {
       const local = JSON.parse(localStorage.getItem('guest_tasks')) || [];
-      setTasks(local);
+      setTasks(Array.isArray(local) ? local : []);
     } else {
       try {
         const res = await axios.get(`${api}/tasks`, { headers: getHeaders() });
-        setTasks(res.data);
+        const data = res.data;
+  
+        // Ensure data is an array
+        setTasks(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('❌ Failed to fetch tasks:', error.message);
+        setTasks([]); // fallback to empty
       }
     }
   };
+  
 
   const saveGuestTasks = (tasksToSave) => {
     localStorage.setItem('guest_tasks', JSON.stringify(tasksToSave));
@@ -134,13 +139,11 @@ function App() {
   };
 
   useEffect(() => {
-    if (token && !guestMode) {
-      setUser({});
-      fetchTasks();
-    } else if (guestMode) {
+    if ((token && !guestMode) || guestMode) {
       fetchTasks();
     }
   }, [guestMode]);
+  
 
   // ---------------- AUTH UI ----------------
   if (!user && !guestMode) {
