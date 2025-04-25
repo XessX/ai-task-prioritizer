@@ -184,7 +184,7 @@ const App = () => {
               </div>
             </header>
 
-            <TaskFilters filters={filters} setFilters={setFilters} />
+            <TaskFilter filters={filters} setFilters={setFilters} />
 
             <div ref={formRef}>
               <TaskForm
