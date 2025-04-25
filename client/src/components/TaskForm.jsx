@@ -1,36 +1,39 @@
-// ✅ Updated TaskForm.jsx with Improved Design & Side-by-Side Layout
+// ✅ Updated TaskForm.jsx with Improved Design & Responsive Layout
 
 import React from 'react';
 import { CalendarDaysIcon } from '@heroicons/react/24/outline';
 
 export default function TaskForm({ form, setForm, handleSubmit, loading, editId }) {
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+    <form onSubmit={handleSubmit} className="space-y-6 mb-8">
+      {/* Title Field */}
       <div>
-        <label className="block text-sm font-medium mb-1">📝 Title</label>
+        <label className="block text-sm font-semibold mb-1">📝 Title</label>
         <input
           className="input w-full"
-          placeholder="Task title"
+          placeholder="Enter task title"
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           required
         />
       </div>
 
+      {/* Description Field */}
       <div>
-        <label className="block text-sm font-medium mb-1">🧾 Description</label>
+        <label className="block text-sm font-semibold mb-1">🧾 Description</label>
         <textarea
           className="input w-full"
-          placeholder="Task description"
+          placeholder="Enter task details"
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           required
         />
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="w-full">
-          <label className="block text-sm font-medium mb-1">📅 Start Date</label>
+      {/* Dates Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold mb-1">📅 Start Date</label>
           <div className="relative">
             <input
               type="date"
@@ -38,12 +41,12 @@ export default function TaskForm({ form, setForm, handleSubmit, loading, editId 
               value={form.startDate || ''}
               onChange={(e) => setForm({ ...form, startDate: e.target.value })}
             />
-            <CalendarDaysIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            <CalendarDaysIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
           </div>
         </div>
 
-        <div className="w-full">
-          <label className="block text-sm font-medium mb-1">📅 End Date</label>
+        <div>
+          <label className="block text-sm font-semibold mb-1">📅 End Date</label>
           <div className="relative">
             <input
               type="date"
@@ -51,14 +54,15 @@ export default function TaskForm({ form, setForm, handleSubmit, loading, editId 
               value={form.endDate || ''}
               onChange={(e) => setForm({ ...form, endDate: e.target.value })}
             />
-            <CalendarDaysIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            <CalendarDaysIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="w-full">
-          <label className="block text-sm font-medium mb-1">📌 Status</label>
+      {/* Status & Priority Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold mb-1">📌 Status</label>
           <select
             className="input w-full"
             value={form.status}
@@ -71,8 +75,8 @@ export default function TaskForm({ form, setForm, handleSubmit, loading, editId 
           </select>
         </div>
 
-        <div className="w-full">
-          <label className="block text-sm font-medium mb-1">🚦 Priority</label>
+        <div>
+          <label className="block text-sm font-semibold mb-1">🚦 Priority</label>
           <select
             className="input w-full"
             value={form.priority}
@@ -86,8 +90,9 @@ export default function TaskForm({ form, setForm, handleSubmit, loading, editId 
         </div>
       </div>
 
-      <div className="pt-4">
-        <button className="button w-full md:w-auto" disabled={loading}>
+      {/* Submit Button */}
+      <div className="pt-4 text-right">
+        <button className="button" disabled={loading}>
           {loading ? 'Saving...' : editId ? 'Update Task' : 'Add Task'}
         </button>
       </div>

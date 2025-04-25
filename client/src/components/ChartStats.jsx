@@ -1,57 +1,77 @@
+// ✅ Updated ChartStats.jsx with Better Colors and Layout
 import React from 'react';
-import { Doughnut } from 'react-chartjs-2';
 import {
-  Chart as ChartJS,
-  ArcElement,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
-  Legend
-} from 'chart.js';
-
-ChartJS.register(ArcElement, Tooltip, Legend);
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts';
 
 export default function ChartStats({ tasks }) {
-  const statusCounts = { pending: 0, in_progress: 0, completed: 0 };
-  const priorityCounts = { low: 0, medium: 0, high: 0 };
+  const priorities = ['low', 'medium', 'high'];
+  const statuses = ['pending', 'in_progress', 'completed'];
 
-  tasks.forEach(task => {
-    if (task.status in statusCounts) statusCounts[task.status]++;
-    if (task.priority in priorityCounts) priorityCounts[task.priority]++;
-  });
+  const priorityData = priorities.map((p) => ({
+    name: p.charAt(0).toUpperCase() + p.slice(1),
+    value: tasks.filter((t) => t.priority === p).length,
+  }));
+
+  const statusData = statuses.map((s) => ({
+    name: s.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+    value: tasks.filter((t) => t.status === s).length,
+  }));
+
+  const COLORS = ['#34D399', '#FBBF24', '#F87171'];
 
   return (
-    <div className="grid md:grid-cols-2 gap-6 mt-10">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow min-h-[300px] h-[350px] flex items-center justify-center">
-        <Doughnut
-          data={{
-            labels: ['Low', 'Medium', 'High'],
-            datasets: [{
-              label: 'Tasks',
-              data: [priorityCounts.low, priorityCounts.medium, priorityCounts.high],
-              backgroundColor: ['#10b981', '#facc15', '#ef4444']
-            }]
-          }}
-          options={{
-            responsive: true,
-            maintainAspectRatio: false
-          }}
-        />
+    <div className="grid md:grid-cols-2 gap-6">
+      {/* 📊 Priority Bar Chart */}
+      <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-2">🚦 Priority Distribution</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={priorityData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis allowDecimals={false} />
+            <Tooltip />
+            <Bar dataKey="value">
+              {priorityData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow min-h-[300px] h-[350px] flex items-center justify-center">
-        <Doughnut
-          data={{
-            labels: ['Pending', 'In Progress', 'Completed'],
-            datasets: [{
-              label: 'Status',
-              data: [statusCounts.pending, statusCounts.in_progress, statusCounts.completed],
-              backgroundColor: ['#3b82f6', '#f97316', '#22c55e']
-            }]
-          }}
-          options={{
-            responsive: true,
-            maintainAspectRatio: false
-          }}
-        />
+      {/* 📈 Status Pie Chart */}
+      <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-2">📌 Status Overview</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={statusData}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={80}
+              label
+            >
+              {statusData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+          </PieChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

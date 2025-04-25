@@ -1,4 +1,4 @@
-const BASE_API = import.meta.env.VITE_API_URL; // https://ai-task-prioritizer-production.up.railway.app
+const BASE_API = import.meta.env.VITE_API_URL.replace(/\/+$/, ''); // remove trailing slash
 
 export const fetchTasksAPI = async (guestMode, getHeaders) => {
     try {
@@ -7,7 +7,7 @@ export const fetchTasksAPI = async (guestMode, getHeaders) => {
         return guestData ? JSON.parse(guestData) : [];
       }
   
-      const res = await fetch(`${BASE_API}/api/tasks`, { headers: getHeaders() }); // 👈 add /api
+      const res = await fetch(`${BASE_API}/tasks`, { headers: getHeaders() }); // ✅ no double /api
       if (!res.ok) throw new Error('Unauthorized - no token');
       return await res.json();
     } catch (error) {

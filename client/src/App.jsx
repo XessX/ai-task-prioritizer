@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import AuthForm from './components/AuthForm';
 import TaskForm from './components/TaskForm';
@@ -147,11 +146,8 @@ const App = () => {
     .filter(t => (filters.priority ? t.priority === filters.priority : true))
     .filter(t => (filters.status ? t.status === filters.status : true))
     .sort((a, b) => {
-      if (filters.sortBy === 'start') {
-        return new Date(a.startDate) - new Date(b.startDate);
-      } else if (filters.sortBy === 'end') {
-        return new Date(a.endDate) - new Date(b.endDate);
-      }
+      if (filters.sortBy === 'start') return new Date(a.startDate) - new Date(b.startDate);
+      if (filters.sortBy === 'end') return new Date(a.endDate) - new Date(b.endDate);
       return 0;
     });
 
@@ -187,40 +183,7 @@ const App = () => {
               </div>
             </header>
 
-            {/* 📌 Filters */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              <select
-                value={filters.priority}
-                onChange={(e) => setFilters(f => ({ ...f, priority: e.target.value }))}
-                className="input"
-              >
-                <option value="">All Priorities</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters(f => ({ ...f, status: e.target.value }))}
-                className="input"
-              >
-                <option value="">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
-
-              <select
-                value={filters.sortBy}
-                onChange={(e) => setFilters(f => ({ ...f, sortBy: e.target.value }))}
-                className="input"
-              >
-                <option value="">No Sorting</option>
-                <option value="start">Start Date</option>
-                <option value="end">Due Date</option>
-              </select>
-            </div>
+            <TaskFilters filters={filters} setFilters={setFilters} />
 
             <div ref={formRef}>
               <TaskForm
