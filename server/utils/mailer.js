@@ -11,17 +11,22 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+/**
+ * Sends a password reset email
+ * @param {string} to - Email recipient
+ * @param {string} resetToken - Unique token for password reset
+ */
 export const sendResetEmail = async (to, resetToken) => {
-    const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+  const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
   const mailOptions = {
-    from: `"TaskAI Support" <${process.env.EMAIL_USER}>`,
+    from: `TaskAI Support <${process.env.EMAIL_USER}>`,
     to,
     subject: '🔐 Password Reset Instructions',
     html: `
       <h2>Password Reset</h2>
-      <p>You requested a password reset. Click below to proceed:</p>
-      <a href="${resetLink}" target="_blank">Reset Password</a>
+      <p>You requested a password reset. Click the link below to reset your password:</p>
+      <a href="${resetLink}" style="display:inline-block;margin-top:10px;padding:10px 20px;background:#6366f1;color:white;text-decoration:none;border-radius:5px;">Reset Password</a>
       <p>This link will expire in 1 hour.</p>
     `,
   };
