@@ -15,7 +15,7 @@ export const fetchTasksAPI = async (guestMode, getHeaders) => {
       return []; // 🛡️ Prevent sending bad requests if no token
     }
 
-    const res = await fetch(`${BASE_API}/api/tasks`, { headers });
+    const res = await fetch(`${BASE_API}/tasks`, { headers });
     if (!res.ok) throw new Error('Unauthorized or server error');
     return await res.json();
   } catch (error) {
