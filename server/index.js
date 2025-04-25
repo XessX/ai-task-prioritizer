@@ -1,3 +1,5 @@
+// ✅ Fully Finalized Backend Server - index.js (Complete, with Password Reset Support)
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -22,11 +24,7 @@ const allowedOrigins = [
   'https://ai-task-prioritizer.vercel.app'
 ];
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
-}));
-
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -37,7 +35,6 @@ app.get('/', (req, res) => {
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized - No token provided' });
-
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
@@ -51,10 +48,8 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) return res.status(400).json({ error: 'User already exists' });
-
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({ data: { email, password: hashedPassword } });
-
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
     res.status(201).json({ token });
   } catch (err) {
@@ -68,7 +63,6 @@ app.post('/api/auth/login', async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.password)))
       return res.status(401).json({ error: 'Invalid credentials' });
-
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
     res.json({ token });
   } catch (err) {
@@ -78,20 +72,48 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.post('/api/auth/forgot-password', async (req, res) => {
   const { email } = req.body;
-  const user = await prisma.user.findUnique({ where: { email } });
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-  if (!user) return res.status(404).json({ error: 'User not found' });
+    const token = crypto.randomUUID();
+    const expiry = new Date(Date.now() + 3600000);
 
-  const token = crypto.randomUUID();
-  const expiry = new Date(Date.now() + 3600000);
+    await prisma.user.update({
+      where: { email },
+      data: { resetToken: token, resetTokenExpiry: expiry }
+    });
 
-  await prisma.user.update({
-    where: { email },
-    data: { resetToken: token, resetTokenExpiry: expiry },
-  });
+    await sendResetEmail(email, token);
+    res.json({ message: 'Reset email sent.' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ error: 'Reset process failed' });
+  }
+});
 
-  await sendResetEmail(email, token);
-  res.json({ message: 'Reset email sent.' });
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: { gte: new Date() },
+      },
+    });
+    if (!user) return res.status(400).json({ error: 'Invalid or expired token' });
+
+    const hashed = await bcrypt.hash(password, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashed, resetToken: null, resetTokenExpiry: null },
+    });
+
+    res.json({ message: 'Password reset successful' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ error: 'Reset failed' });
+  }
 });
 
 app.get('/api/tasks', verifyToken, async (req, res) => {
@@ -105,11 +127,9 @@ app.get('/api/tasks', verifyToken, async (req, res) => {
 app.post('/api/tasks', verifyToken, async (req, res) => {
   const { title, description, dueDate } = req.body;
   const { priority, status } = await classifyTask(title, description);
-
   const task = await prisma.task.create({
     data: { title, description, priority, status, dueDate: dueDate ? new Date(dueDate) : null, userId: req.user.userId },
   });
-
   const tasks = await prisma.task.findMany({ where: { userId: req.user.userId } });
   io.to(req.user.userId).emit('tasks:update', tasks);
   res.status(201).json(task);
