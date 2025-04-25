@@ -27,7 +27,6 @@ export default function TaskCard({
     }
   }
 
-  // Optional: Progress bar based on dates
   let progress = 0;
   if (startDate && endDate && now >= startDate) {
     const total = endDate - startDate;
@@ -40,17 +39,24 @@ export default function TaskCard({
       <div className="flex justify-between items-start">
         <div>
           <h3 className="font-semibold text-lg flex items-center gap-2">
-            {task.title} {statusTag && <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">{statusTag}</span>}
+            {task.title}{' '}
+            {statusTag && (
+              <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
+                {statusTag}
+              </span>
+            )}
           </h3>
-          <p className="mt-1 text-sm">{task.description}</p>
+          <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{task.description}</p>
 
           <div className="mt-2 text-xs text-gray-600 space-y-1 dark:text-gray-200">
             {task.startDate && <p>📅 Start: {new Date(task.startDate).toLocaleDateString()}</p>}
             {task.endDate && <p>⏰ Due: {new Date(task.endDate).toLocaleDateString()}</p>}
-            <p>Priority: <span className="capitalize">{task.priority || 'low'}</span> | Status: <span className="capitalize">{task.status || 'pending'}</span></p>
+            <p>
+              Priority: <span className="capitalize font-medium">{task.priority || 'low'}</span>{' '}
+              | Status: <span className="capitalize font-medium">{task.status || 'pending'}</span>
+            </p>
           </div>
 
-          {/* Progress Bar */}
           {startDate && endDate && (
             <div className="mt-2">
               <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -91,7 +97,6 @@ export default function TaskCard({
         </div>
       </div>
 
-      {/* ✅ DRAG HANDLE */}
       <div
         className="absolute bottom-2 right-2 cursor-grab text-gray-400 hover:text-gray-700 text-xl select-none"
         ref={dragRef}

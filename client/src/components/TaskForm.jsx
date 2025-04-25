@@ -1,76 +1,96 @@
-// src/components/TaskForm.jsx
+// ✅ Updated TaskForm.jsx with Improved Design & Side-by-Side Layout
 
 import React from 'react';
-import { CalendarDaysIcon } from '@heroicons/react/24/outline'; // 🗓️ Make sure you have Heroicons installed!
+import { CalendarDaysIcon } from '@heroicons/react/24/outline';
 
 export default function TaskForm({ form, setForm, handleSubmit, loading, editId }) {
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 mb-6">
-      <input
-        className="input"
-        placeholder="Task title"
-        value={form.title}
-        onChange={(e) => setForm({ ...form, title: e.target.value })}
-        required
-      />
-
-      <textarea
-        className="input"
-        placeholder="Task description"
-        value={form.description}
-        onChange={(e) => setForm({ ...form, description: e.target.value })}
-        required
-      />
-
-      {/* 📅 Start Date */}
-      <div className="relative">
+    <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+      <div>
+        <label className="block text-sm font-medium mb-1">📝 Title</label>
         <input
-          type="date"
-          className="input w-full pr-10 appearance-none"
-          value={form.startDate || ''}
-          onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+          className="input w-full"
+          placeholder="Task title"
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          required
         />
-        <CalendarDaysIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
       </div>
 
-      {/* 📅 End Date */}
-      <div className="relative">
-        <input
-          type="date"
-          className="input w-full pr-10 appearance-none"
-          value={form.endDate || ''}
-          onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+      <div>
+        <label className="block text-sm font-medium mb-1">🧾 Description</label>
+        <textarea
+          className="input w-full"
+          placeholder="Task description"
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          required
         />
-        <CalendarDaysIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
       </div>
 
-      <div className="flex gap-3">
-        <select
-          className="input"
-          value={form.status}
-          onChange={(e) => setForm({ ...form, status: e.target.value })}
-        >
-          <option value="">🤖 Auto Status</option>
-          <option value="pending">🕒 Pending</option>
-          <option value="in_progress">🚧 In Progress</option>
-          <option value="completed">✅ Completed</option>
-        </select>
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="w-full">
+          <label className="block text-sm font-medium mb-1">📅 Start Date</label>
+          <div className="relative">
+            <input
+              type="date"
+              className="input w-full pr-10"
+              value={form.startDate || ''}
+              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+            />
+            <CalendarDaysIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+          </div>
+        </div>
 
-        <select
-          className="input"
-          value={form.priority}
-          onChange={(e) => setForm({ ...form, priority: e.target.value })}
-        >
-          <option value="">🤖 Auto Priority</option>
-          <option value="low">🟢 Low</option>
-          <option value="medium">🟡 Medium</option>
-          <option value="high">🔴 High</option>
-        </select>
+        <div className="w-full">
+          <label className="block text-sm font-medium mb-1">📅 End Date</label>
+          <div className="relative">
+            <input
+              type="date"
+              className="input w-full pr-10"
+              value={form.endDate || ''}
+              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+            />
+            <CalendarDaysIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+          </div>
+        </div>
       </div>
 
-      <button className="button" disabled={loading}>
-        {loading ? 'Saving...' : editId ? 'Update Task' : 'Add Task'}
-      </button>
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="w-full">
+          <label className="block text-sm font-medium mb-1">📌 Status</label>
+          <select
+            className="input w-full"
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+          >
+            <option value="">🤖 Auto Status</option>
+            <option value="pending">🕒 Pending</option>
+            <option value="in_progress">🚧 In Progress</option>
+            <option value="completed">✅ Completed</option>
+          </select>
+        </div>
+
+        <div className="w-full">
+          <label className="block text-sm font-medium mb-1">🚦 Priority</label>
+          <select
+            className="input w-full"
+            value={form.priority}
+            onChange={(e) => setForm({ ...form, priority: e.target.value })}
+          >
+            <option value="">🤖 Auto Priority</option>
+            <option value="low">🟢 Low</option>
+            <option value="medium">🟡 Medium</option>
+            <option value="high">🔴 High</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="pt-4">
+        <button className="button w-full md:w-auto" disabled={loading}>
+          {loading ? 'Saving...' : editId ? 'Update Task' : 'Add Task'}
+        </button>
+      </div>
     </form>
   );
 }

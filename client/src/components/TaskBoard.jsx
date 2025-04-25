@@ -1,5 +1,3 @@
-// src/components/TaskBoard.jsx
-
 import React from 'react';
 import {
   DndContext,
@@ -62,28 +60,40 @@ export default function TaskBoard({ tasks, setTasks, setForm, setEditId, handleD
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      {Object.entries(statuses).map(([key, label]) => {
-        const list = tasks.filter(t => t.status === key);
-        return (
-          <div key={key} className="mb-8">
-            <h2 className="text-xl font-semibold mb-3">{label}</h2>
-            <SortableContext items={list.map(t => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-3">
-                {list.map(task => (
-                  <SortableTask
-                    key={task.id}
-                    task={task}
-                    setForm={setForm}
-                    setEditId={setEditId}
-                    handleDelete={handleDelete}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </div>
-        );
-      })}
-    </DndContext>
+    <div className="space-y-10 mt-10">
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        {Object.entries(statuses).map(([key, label]) => {
+          const list = tasks
+            .filter(t => t.status === key)
+            .sort((a, b) => {
+              const aTime = new Date(a.endDate || a.startDate || a.createdAt).getTime();
+              const bTime = new Date(b.endDate || b.startDate || b.createdAt).getTime();
+              return aTime - bTime;
+            });
+
+          return (
+            <div key={key}>
+              <h2 className="text-2xl font-bold mb-4 border-b pb-1">{label}</h2>
+              <SortableContext items={list.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-3">
+                  {list.map(task => (
+                    <SortableTask
+                      key={task.id}
+                      task={task}
+                      setForm={setForm}
+                      setEditId={setEditId}
+                      handleDelete={handleDelete}
+                    />
+                  ))}
+                  {list.length === 0 && (
+                    <p className="text-sm text-gray-400 italic">No tasks in this section</p>
+                  )}
+                </div>
+              </SortableContext>
+            </div>
+          );
+        })}
+      </DndContext>
+    </div>
   );
 }
