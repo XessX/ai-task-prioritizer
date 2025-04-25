@@ -17,7 +17,6 @@ const prisma = new PrismaClient();
 const app = express();
 const server = http.createServer(app);
 
-// Allow both local and production frontend URLs for development and deployment
 const allowedOrigins = [
   'http://localhost:5173',
   'https://ai-task-prioritizer.vercel.app'
@@ -31,7 +30,10 @@ app.use(cors({
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Verify JWT token middleware
+app.get('/', (req, res) => {
+  res.send('🚀 AI Task Prioritizer Backend running');
+});
+
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized - No token provided' });
@@ -44,7 +46,6 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// Auth Routes
 app.post('/api/auth/register', async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -93,7 +94,6 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   res.json({ message: 'Reset email sent.' });
 });
 
-// Task Routes
 app.get('/api/tasks', verifyToken, async (req, res) => {
   const tasks = await prisma.task.findMany({
     where: { userId: req.user.userId },
@@ -110,23 +110,25 @@ app.post('/api/tasks', verifyToken, async (req, res) => {
     data: { title, description, priority, status, dueDate: dueDate ? new Date(dueDate) : null, userId: req.user.userId },
   });
 
-  io.to(req.user.userId).emit('tasks:update', await prisma.task.findMany({ where: { userId: req.user.userId } }));
+  const tasks = await prisma.task.findMany({ where: { userId: req.user.userId } });
+  io.to(req.user.userId).emit('tasks:update', tasks);
   res.status(201).json(task);
 });
 
 app.put('/api/tasks/:id', verifyToken, async (req, res) => {
   const task = await prisma.task.update({ where: { id: req.params.id }, data: req.body });
-  io.to(req.user.userId).emit('tasks:update', await prisma.task.findMany({ where: { userId: req.user.userId } }));
+  const tasks = await prisma.task.findMany({ where: { userId: req.user.userId } });
+  io.to(req.user.userId).emit('tasks:update', tasks);
   res.json(task);
 });
 
 app.delete('/api/tasks/:id', verifyToken, async (req, res) => {
   await prisma.task.delete({ where: { id: req.params.id } });
-  io.to(req.user.userId).emit('tasks:update', await prisma.task.findMany({ where: { userId: req.user.userId } }));
+  const tasks = await prisma.task.findMany({ where: { userId: req.user.userId } });
+  io.to(req.user.userId).emit('tasks:update', tasks);
   res.status(204).send();
 });
 
-// Socket.IO setup with authentication
 const io = new Server(server, {
   cors: { origin: allowedOrigins },
 });
@@ -134,17 +136,15 @@ const io = new Server(server, {
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
   if (!token) return next(new Error('Unauthorized'));
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) return next(new Error('Invalid token'));
     socket.userId = decoded.userId;
     socket.join(socket.userId);
     next();
-  } catch {
-    next(new Error('Invalid Token'));
-  }
+  });
 });
 
-io.on('connection', (socket) => {
+io.on('connection', socket => {
   console.log(`Connected: ${socket.id} (User ID: ${socket.userId})`);
 });
 
