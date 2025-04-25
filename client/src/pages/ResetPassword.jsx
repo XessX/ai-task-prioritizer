@@ -22,14 +22,13 @@ export default function ResetPassword() {
       setLoading(true);
       const res = await axios.post(`${api}/auth/reset-password`, { token, password });
       if (res.data?.message) {
-        toast.success('✅ Password reset successful. You may now log in.');
+        toast.success('✅ Password reset successful. You may now login.');
         navigate('/');
       } else {
-        toast.error('❌ Password reset failed. Please try again.');
+        toast.error('❌ Password reset failed.');
       }
     } catch (err) {
-      console.error('Reset error:', err);
-      toast.error('❌ Reset failed. Link might be invalid or expired.');
+      toast.error('❌ Reset failed. Link might be expired or invalid.');
     } finally {
       setLoading(false);
     }
