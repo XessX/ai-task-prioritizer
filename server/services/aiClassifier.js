@@ -6,14 +6,6 @@ dotenv.config();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/**
- * Classify a task using AI into priority and status based on title, description, and dates
- * @param {string} title 
- * @param {string} description 
- * @param {string|null} startDate 
- * @param {string|null} endDate 
- * @returns {Promise<{ priority: string, status: string }>}
- */
 export const classifyTask = async (title, description, startDate, endDate) => {
   const prompt = `
 You are an AI assistant for task management.
