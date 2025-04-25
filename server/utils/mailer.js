@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendResetEmail = async (to, resetToken) => {
-  const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+    const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
   const mailOptions = {
     from: `"TaskAI Support" <${process.env.EMAIL_USER}>`,
