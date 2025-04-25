@@ -7,22 +7,30 @@ import { sendPasswordResetEmail } from '../utils/mailer.js';
 
 const prisma = new PrismaClient();
 
-// ✅ REGISTER
+// POST /api/auth/register
 export const register = async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const exists = await prisma.user.findUnique({ where: { email } });
-    if (exists) return res.status(400).json({ error: 'Email already exists' });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await prisma.user.create({ data: { email, password: hashedPassword } });
-
-    res.status(201).json({ message: 'Registered successfully' });
-  } catch (err) {
-    console.error('❌ Register error:', err);
-    res.status(500).json({ error: 'Failed to register' });
-  }
-};
+    const { email, password } = req.body;
+    try {
+      const exists = await prisma.user.findUnique({ where: { email } });
+      if (exists) return res.status(400).json({ error: 'Email already exists' });
+  
+      const hashedPassword = await bcrypt.hash(password, 10);
+  
+      const user = await prisma.user.create({
+        data: { email, password: hashedPassword }
+      });
+  
+      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+        expiresIn: '1d'
+      });
+  
+      res.status(201).json({ token }); // ✅ Return token just like login
+    } catch (err) {
+      console.error('❌ Register error:', err);
+      res.status(500).json({ error: 'Failed to register' });
+    }
+  };
+  
 
 // ✅ LOGIN
 export const login = async (req, res) => {

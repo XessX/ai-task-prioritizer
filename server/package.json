@@ -1,32 +1,32 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "",
+  "description": "AI Task Prioritizer Backend",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
     "start": "node index.js",
     "build": "prisma generate"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
     "@prisma/client": "^6.6.0",
     "@sendgrid/mail": "^8.1.5",
     "bcrypt": "^5.1.1",
-    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
     "nodemailer": "^6.10.1",
-    "openai": "^4.95.1"
+    "openai": "^4.96.0",
+    "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9",
+    "nodemon": "^3.1.10",
     "prisma": "^6.6.0"
   }
 }

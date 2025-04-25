@@ -1,94 +1,94 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+// src/App.jsx
+import React, { useEffect, useRef, useState } from 'react';
+import AuthForm from './components/AuthForm';
+import TaskForm from './components/TaskForm';
+import TaskBoard from './components/TaskBoard';
+import ChartStats from './components/ChartStats';
+import { Toaster, toast } from 'react-hot-toast';
+import { fetchTasksAPI, submitTaskAPI, deleteTaskAPI } from './lib/api';
+import { useDarkMode } from './hooks/useDarkMode';
+import { useSocket } from './hooks/useSocket';
+import { getAIClassification } from './lib/openai';
 
-const api = import.meta.env.VITE_API_URL;
+const App = () => {
+  const [tasks, setTasks] = useState([]);
+  const [editId, setEditId] = useState(null);
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+    status: '',
+    priority: ''
+  });
 
-function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => (localStorage.getItem('token') ? {} : null));
+  const [guestMode, setGuestMode] = useState(() => localStorage.getItem('guest_mode') === 'true');
+  const [token, setToken] = useState(() => localStorage.getItem('token'));
+  useSocket(setTasks, token); // 🔄 Real-time sync
+
   const [authForm, setAuthForm] = useState({ email: '', password: '' });
   const [isLogin, setIsLogin] = useState(true);
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
-  const [tasks, setTasks] = useState([]);
-  const [form, setForm] = useState({ title: '', description: '' });
-  const [editId, setEditId] = useState(null);
-  const [guestMode, setGuestMode] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { darkMode, toggleDark } = useDarkMode();
+  const formRef = useRef(null);
 
-  const token = localStorage.getItem('token');
-
-  const getHeaders = () =>
-    token && !guestMode ? { Authorization: `Bearer ${token}` } : {};
-
-  const fetchTasks = async () => {
-    if (guestMode) {
-      const local = JSON.parse(localStorage.getItem('guest_tasks')) || [];
-      setTasks(Array.isArray(local) ? local : []);
-    } else {
-      try {
-        const res = await axios.get(`${api}/tasks`, { headers: getHeaders() });
-        setTasks(Array.isArray(res.data) ? res.data : []);
-      } catch (error) {
-        console.error('❌ Failed to fetch tasks:', error.message);
-        setTasks([]);
-        if (error.response?.status === 401) logout(); // token expired
-      }
-    }
+  const getHeaders = () => {
+    const currentToken = localStorage.getItem('token');
+    return currentToken && !guestMode ? { Authorization: `Bearer ${currentToken}` } : {};
   };
 
-  const saveGuestTasks = (tasksToSave) => {
-    localStorage.setItem('guest_tasks', JSON.stringify(tasksToSave));
-    setTasks(tasksToSave);
+  const resetFormState = () => {
+    setForm({ title: '', description: '', dueDate: '', status: '', priority: '' });
+    setEditId(null);
+  };
+
+  const fetchTasks = async () => {
+    try {
+      const data = await fetchTasksAPI(guestMode, getHeaders);
+      setTasks(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('❌ fetchTasks error:', err);
+      toast.error('Failed to load tasks');
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title || !form.description) return;
-
-    setLoading(true);
-
-    if (guestMode) {
-      const local = JSON.parse(localStorage.getItem('guest_tasks')) || [];
-      const updated = editId
-        ? local.map((task) =>
-            task.id === editId ? { ...task, ...form } : task
-          )
-        : [...local, { id: Date.now(), ...form, priority: 'pending' }];
-      saveGuestTasks(updated);
-      setEditId(null);
-      setForm({ title: '', description: '' });
-      setLoading(false);
-      return;
-    }
+    if (!form.title || !form.description) return toast.error('📝 Please fill all fields');
 
     try {
-      if (editId) {
-        await axios.put(`${api}/tasks/${editId}`, form, { headers: getHeaders() });
-        setEditId(null);
-      } else {
-        await axios.post(`${api}/tasks`, form, { headers: getHeaders() });
-      }
-      setForm({ title: '', description: '' });
+      const ai = await getAIClassification(form.description);
+      const payload = {
+        ...form,
+        priority: form.priority || ai.priority,
+        status: form.status || ai.status,
+        dueDate: form.dueDate || null
+      };
+
+      await submitTaskAPI({ form: payload, editId, guestMode, getHeaders, setTasks });
+
+      toast.success(editId ? '✅ Task updated' : '✅ Task added');
+      resetFormState();
       fetchTasks();
-    } catch (error) {
-      alert('❌ Error creating/updating task');
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error('❌ Submission failed:', err);
+      toast.error('Error saving task');
     }
   };
 
   const handleDelete = async (id) => {
-    if (guestMode) {
-      const updated = tasks.filter((task) => task.id !== id);
-      saveGuestTasks(updated);
-      return;
-    }
+    const updated = tasks.filter(t => t.id !== id);
+    setTasks(updated); // Immediate UI update
 
     try {
-      await axios.delete(`${api}/tasks/${id}`, { headers: getHeaders() });
-      fetchTasks();
-    } catch (error) {
-      alert('❌ Error deleting task');
+      await deleteTaskAPI(id, guestMode, getHeaders, setTasks);
+      toast.success('🗑️ Task deleted');
+      fetchTasks(); // Optional: ensure sync
+    } catch (err) {
+      console.error('❌ Delete failed:', err);
+      toast.error('Delete failed');
+      fetchTasks(); // Fallback to full refresh
     }
   };
 
@@ -96,230 +96,117 @@ function App() {
     e.preventDefault();
     try {
       const endpoint = isLogin ? 'login' : 'register';
-      const res = await axios.post(`${api}/auth/${endpoint}`, authForm);
-      if (res.data.token) {
-        localStorage.setItem('token', res.data.token);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(authForm),
+      }).then(r => r.json());
+
+      if (res.token) {
+        localStorage.setItem('token', res.token);
+        setToken(res.token);
         setUser({ email: authForm.email });
         setAuthForm({ email: '', password: '' });
+        resetFormState();
         fetchTasks();
       } else {
-        alert('✅ Registered! You can now log in.');
+        toast.success('✅ Registered! Please login.');
         setIsLogin(true);
       }
     } catch (err) {
-      alert('❌ Auth failed');
+      toast.error('❌ Auth failed');
     }
   };
 
   const handlePasswordReset = async () => {
-    if (!resetEmail) return alert('Please enter your email.');
+    if (!resetEmail) return toast.error('Please enter your email.');
     try {
-      await axios.post(`${api}/auth/forgot-password`, { email: resetEmail });
-      alert(`🔐 Reset link sent to ${resetEmail}`);
+      await fetch(`${import.meta.env.VITE_API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      toast.success(`🔐 Reset link sent to ${resetEmail}`);
       setShowReset(false);
+      setResetEmail('');
     } catch {
-      alert('❌ Failed to send reset link');
+      toast.error('❌ Failed to send reset link');
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.clear();
+    setToken(null);
     setUser(null);
     setTasks([]);
+    setGuestMode(false);
+    resetFormState();
   };
 
-  // Check token existence on load
   useEffect(() => {
-    if (token && !guestMode) {
-      setUser({}); // placeholder user object to activate UI
-      fetchTasks();
-    } else if (guestMode) {
-      fetchTasks();
-    }
-  }, [guestMode]);
+    fetchTasks();
+  }, [token, guestMode]);
 
-  // ---------------- AUTH UI ----------------
-  if (!user && !guestMode) {
-    return (
-      <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-blue-100 via-white to-purple-100 px-4">
-        <div className="w-full max-w-sm bg-white rounded-lg shadow-xl p-6">
-          {!showReset ? (
-            <>
-              <h1 className="text-2xl font-bold mb-4 text-center">
-                {isLogin ? 'Login' : 'Register'}
-              </h1>
-              <form onSubmit={handleAuthSubmit} className="space-y-4">
-                <input
-                  className="w-full p-2 border rounded"
-                  placeholder="Email"
-                  type="email"
-                  value={authForm.email}
-                  onChange={(e) =>
-                    setAuthForm({ ...authForm, email: e.target.value })
-                  }
-                />
-                <input
-                  className="w-full p-2 border rounded"
-                  placeholder="Password"
-                  type="password"
-                  value={authForm.password}
-                  onChange={(e) =>
-                    setAuthForm({ ...authForm, password: e.target.value })
-                  }
-                />
-                <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
-                  {isLogin ? 'Login' : 'Register'}
-                </button>
-              </form>
-
-              <div className="text-sm text-center mt-4">
-                <button
-                  className="text-blue-600 hover:underline block mb-2"
-                  onClick={() => setShowReset(true)}
-                >
-                  Forgot Password?
-                </button>
-                <p>
-                  {isLogin ? 'No account?' : 'Have an account?'}{' '}
-                  <button
-                    className="text-blue-600 hover:underline"
-                    onClick={() => setIsLogin(!isLogin)}
-                  >
-                    {isLogin ? 'Register here' : 'Login here'}
-                  </button>
-                </p>
-                <p className="mt-3">
-                  <button
-                    onClick={() => setGuestMode(true)}
-                    className="text-gray-600 underline text-sm"
-                  >
-                    Or continue as guest →
-                  </button>
-                </p>
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className="text-xl font-semibold text-center mb-4">
-                🔐 Reset Password
-              </h2>
-              <input
-                className="w-full p-2 border rounded mb-3"
-                placeholder="Enter your email"
-                value={resetEmail}
-                onChange={(e) => setResetEmail(e.target.value)}
-              />
-              <button
-                className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-                onClick={handlePasswordReset}
-              >
-                Send Reset Link
-              </button>
-              <p className="text-center mt-4">
-                <button
-                  className="text-sm text-blue-600 hover:underline"
-                  onClick={() => setShowReset(false)}
-                >
-                  ← Back to login
-                </button>
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // ---------------- MAIN UI ----------------
   return (
-    <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-white to-blue-50 px-4">
-      <div className="w-full max-w-2xl bg-white rounded-lg shadow-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">
-            🧠 AI Task Prioritizer
-          </h1>
-          <div>
-            {!guestMode ? (
-              <button onClick={logout} className="text-red-600 hover:underline">
-                Logout
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setGuestMode(false);
-                  setTasks([]);
-                }}
-                className="text-blue-600 hover:underline"
-              >
-                Login
-              </button>
-            )}
+    <>
+      <Toaster />
+      {!user && !guestMode ? (
+        <AuthForm
+          authForm={authForm}
+          setAuthForm={setAuthForm}
+          isLogin={isLogin}
+          setIsLogin={setIsLogin}
+          showReset={showReset}
+          setShowReset={setShowReset}
+          resetEmail={resetEmail}
+          setResetEmail={setResetEmail}
+          handleAuthSubmit={handleAuthSubmit}
+          handlePasswordReset={handlePasswordReset}
+          toggleDark={toggleDark}
+          darkMode={darkMode}
+          setGuestMode={setGuestMode}
+          setUser={setUser}
+          resetFormState={resetFormState}
+        />
+      ) : (
+        <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4">
+          <div className="max-w-5xl mx-auto space-y-6">
+            <header className="flex justify-between items-center">
+              <h1 className="text-3xl font-bold">🧠 AI Task Prioritizer</h1>
+              <div className="flex gap-3 items-center text-sm">
+                <button onClick={toggleDark} className="text-indigo-600">
+                  {darkMode ? '☀️ Light' : '🌙 Dark'}
+                </button>
+                <button onClick={logout} className="text-red-500">Logout</button>
+              </div>
+            </header>
+
+            <div ref={formRef}>
+              <TaskForm
+                form={form}
+                setForm={setForm}
+                handleSubmit={handleSubmit}
+                editId={editId}
+              />
+            </div>
+
+            <TaskBoard
+              tasks={tasks}
+              setTasks={setTasks}
+              setForm={(val) => {
+                setForm(val);
+                formRef.current?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              setEditId={setEditId}
+              handleDelete={handleDelete}
+            />
+
+            <ChartStats tasks={tasks} />
           </div>
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 mb-6">
-          <input
-            className="w-full p-3 border rounded"
-            placeholder="Task title"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-          />
-          <textarea
-            className="w-full p-3 border rounded"
-            placeholder="Task description"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-          <button
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
-            disabled={loading}
-          >
-            {loading ? 'Analyzing...' : editId ? 'Update Task' : 'Add Task'}
-          </button>
-        </form>
-
-        <div className="space-y-4">
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              className={`p-4 rounded border shadow flex justify-between items-start ${
-                task.priority === 'high'
-                  ? 'border-red-500'
-                  : task.priority === 'medium'
-                  ? 'border-yellow-500'
-                  : 'border-green-500'
-              }`}
-            >
-              <div>
-                <h2 className="font-semibold">{task.title}</h2>
-                <p>{task.description}</p>
-                <p className="text-sm italic text-gray-600">
-                  Priority: {task.priority}
-                </p>
-              </div>
-              <div className="flex flex-col items-center ml-4 space-y-1">
-                <button
-                  onClick={() => {
-                    setForm({ title: task.title, description: task.description });
-                    setEditId(task.id);
-                  }}
-                  className="text-blue-600 font-bold"
-                >
-                  ✏️
-                </button>
-                <button
-                  onClick={() => handleDelete(task.id)}
-                  className="text-red-600 font-bold"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+      )}
+    </>
   );
-}
+};
 
 export default App;

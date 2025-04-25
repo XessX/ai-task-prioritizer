@@ -1,29 +1,38 @@
-// server/services/aiClassifier.js
+// services/aiClassifier.js
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 dotenv.config();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export const classifyTaskPriority = async (title, description) => {
-  try {
-    const prompt = `
-You are an AI that classifies task priority: high, medium, or low.
+export const classifyTask = async (title, description) => {
+  const prompt = `
+Classify this task and return JSON only:
 Title: ${title}
 Description: ${description}
-Respond ONLY with one word: high, medium, or low.
+Return:
+{
+  "priority": "low" | "medium" | "high",
+  "status": "pending" | "in_progress" | "completed"
+}
 `;
 
+  try {
     const result = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2,
+      temperature: 0.3,
     });
 
-    const priority = result.choices[0].message.content.trim().toLowerCase();
-    return ['high', 'medium', 'low'].includes(priority) ? priority : 'low';
+    const match = result.choices[0]?.message?.content.match(/{[\s\S]*}/);
+    const json = match ? JSON.parse(match[0]) : {};
+
+    return {
+      priority: json.priority || 'medium',
+      status: json.status || 'pending',
+    };
   } catch (err) {
-    console.error('❌ OpenAI error:', err.message);
-    return 'low';
+    console.error('❌ AI Classifier failed:', err.message);
+    return { priority: 'medium', status: 'pending' };
   }
 };
