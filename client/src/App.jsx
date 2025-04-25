@@ -13,18 +13,11 @@ import { getAIClassification } from './lib/openai';
 const App = () => {
   const [tasks, setTasks] = useState([]);
   const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    dueDate: '',
-    status: '',
-    priority: ''
-  });
-
+  const [form, setForm] = useState({ title: '', description: '', dueDate: '', status: '', priority: '' });
   const [user, setUser] = useState(() => (localStorage.getItem('token') ? {} : null));
   const [guestMode, setGuestMode] = useState(() => localStorage.getItem('guest_mode') === 'true');
   const [token, setToken] = useState(() => localStorage.getItem('token'));
-  useSocket(setTasks, token); // 🔄 Real-time sync
+  useSocket(setTasks, token);
 
   const [authForm, setAuthForm] = useState({ email: '', password: '' });
   const [isLogin, setIsLogin] = useState(true);
@@ -56,7 +49,6 @@ const App = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title || !form.description) return toast.error('📝 Please fill all fields');
-
     try {
       const ai = await getAIClassification(form.description);
       const payload = {
@@ -65,9 +57,7 @@ const App = () => {
         status: form.status || ai.status,
         dueDate: form.dueDate || null
       };
-
       await submitTaskAPI({ form: payload, editId, guestMode, getHeaders, setTasks });
-
       toast.success(editId ? '✅ Task updated' : '✅ Task added');
       resetFormState();
       fetchTasks();
@@ -79,16 +69,15 @@ const App = () => {
 
   const handleDelete = async (id) => {
     const updated = tasks.filter(t => t.id !== id);
-    setTasks(updated); // Immediate UI update
-
+    setTasks(updated);
     try {
       await deleteTaskAPI(id, guestMode, getHeaders, setTasks);
       toast.success('🗑️ Task deleted');
-      fetchTasks(); // Optional: ensure sync
+      fetchTasks();
     } catch (err) {
       console.error('❌ Delete failed:', err);
       toast.error('Delete failed');
-      fetchTasks(); // Fallback to full refresh
+      fetchTasks();
     }
   };
 
@@ -109,11 +98,17 @@ const App = () => {
         setAuthForm({ email: '', password: '' });
         resetFormState();
         fetchTasks();
+        toast.success('✅ Login successful');
+      } else if (res.message) {
+        toast.success(res.message);
+        if (!isLogin) setIsLogin(true);
+      } else if (res.error) {
+        toast.error(res.error);
       } else {
-        toast.success('✅ Registered! Please login.');
-        setIsLogin(true);
+        toast.error('❌ Unknown auth response');
       }
     } catch (err) {
+      console.error('❌ Auth error:', err);
       toast.error('❌ Auth failed');
     }
   };
@@ -121,11 +116,12 @@ const App = () => {
   const handlePasswordReset = async () => {
     if (!resetEmail) return toast.error('Please enter your email.');
     try {
-      await fetch(`${import.meta.env.VITE_API_URL}/auth/forgot-password`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: resetEmail }),
-      });
+      }).then(r => r.json());
+      if (res.error) return toast.error(res.error);
       toast.success(`🔐 Reset link sent to ${resetEmail}`);
       setShowReset(false);
       setResetEmail('');

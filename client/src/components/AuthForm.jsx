@@ -1,22 +1,32 @@
 import React from 'react';
+import { toast } from 'react-hot-toast';
 
 export default function AuthForm({
-    authForm,
-    setAuthForm,
-    isLogin,
-    setIsLogin,
-    showReset,
-    setShowReset,
-    resetEmail,
-    setResetEmail,
-    handleAuthSubmit,
-    handlePasswordReset,
-    toggleDark,
-    darkMode,
-    setGuestMode,
-    setUser,
-    resetFormState
-  }) {
+  authForm,
+  setAuthForm,
+  isLogin,
+  setIsLogin,
+  showReset,
+  setShowReset,
+  resetEmail,
+  setResetEmail,
+  handleAuthSubmit,
+  handlePasswordReset,
+  toggleDark,
+  darkMode,
+  setGuestMode,
+  setUser,
+  resetFormState
+}) {
+
+  const validateAuthFields = () => {
+    if (!authForm.email || !authForm.password) {
+      toast.error('📧 Email and password required');
+      return false;
+    }
+    return true;
+  };
+
   return (
     <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-blue-50 to-purple-100 dark:from-gray-900 dark:to-gray-800 px-4">
       <div className="w-full max-w-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-white rounded-xl p-8 shadow-lg space-y-4 text-base md:text-lg">
@@ -25,7 +35,10 @@ export default function AuthForm({
             <h1 className="text-3xl font-bold text-center text-indigo-700 dark:text-indigo-400">
               {isLogin ? 'Login' : 'Register'}
             </h1>
-            <form onSubmit={handleAuthSubmit} className="space-y-3">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (validateAuthFields()) handleAuthSubmit(e);
+            }} className="space-y-3">
               <input
                 type="email"
                 placeholder="Email"
@@ -69,8 +82,20 @@ export default function AuthForm({
         ) : (
           <>
             <h2 className="text-xl font-semibold text-center text-indigo-700">🔐 Reset Password</h2>
-            <input className="input" placeholder="Enter your email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} />
-            <button className="button" onClick={handlePasswordReset}>Send Reset Link</button>
+            <input
+              className="input"
+              placeholder="Enter your email"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+            />
+            <button
+              className="button"
+              onClick={() => {
+                if (!resetEmail) return toast.error('📧 Enter your email');
+                handlePasswordReset();
+              }}>
+              Send Reset Link
+            </button>
             <p className="text-center text-sm mt-3">
               <button className="text-indigo-600 hover:underline" onClick={() => { setShowReset(false); setResetEmail(''); }}>← Back to login</button>
             </p>
