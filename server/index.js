@@ -141,13 +141,26 @@ app.post('/api/auth/validate-token', async (req, res) => {
 });
 
 // ➡️ Task Routes
+// server/index.js
+
 app.get('/api/tasks', verifyToken, async (req, res) => {
-  const tasks = await prisma.task.findMany({
-    where: { userId: req.user.userId },
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(tasks);
+  try {
+    if (!req.user?.userId) {
+      return res.status(400).json({ error: 'Missing user ID' });
+    }
+
+    const tasks = await prisma.task.findMany({
+      where: { userId: req.user.userId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(tasks);
+  } catch (error) {
+    console.error('Error fetching tasks:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
+
 
 app.post('/api/tasks', verifyToken, async (req, res) => {
   const { title, description, startDate, endDate } = req.body;

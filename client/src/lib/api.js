@@ -1,21 +1,29 @@
-const BASE_API = import.meta.env.VITE_API_URL.replace(/\/+$/, ''); // remove trailing slash
+// src/lib/api.js
+
+const BASE_API = import.meta.env.VITE_API_URL;
 
 export const fetchTasksAPI = async (guestMode, getHeaders) => {
-    try {
-      if (guestMode) {
-        const guestData = localStorage.getItem('guest_tasks');
-        return guestData ? JSON.parse(guestData) : [];
-      }
-  
-      const res = await fetch(`${BASE_API}/tasks`, { headers: getHeaders() }); // ✅ no double /api
-      if (!res.ok) throw new Error('Unauthorized - no token');
-      return await res.json();
-    } catch (error) {
-      console.error('fetchTasksAPI Error:', error);
-      return [];
+  try {
+    if (guestMode) {
+      const guestData = localStorage.getItem('guest_tasks');
+      return guestData ? JSON.parse(guestData) : [];
     }
-  };
-  
+
+    const headers = getHeaders();
+    if (!headers.Authorization) {
+      console.warn('No Authorization token found!');
+      return []; // 🛡️ Prevent sending bad requests if no token
+    }
+
+    const res = await fetch(`${BASE_API}/api/tasks`, { headers });
+    if (!res.ok) throw new Error('Unauthorized or server error');
+    return await res.json();
+  } catch (error) {
+    console.error('fetchTasksAPI Error:', error);
+    return [];
+  }
+};
+
   export const submitTaskAPI = async ({ form, editId, guestMode, getHeaders, setTasks }) => {
     if (guestMode) {
       const guest = JSON.parse(localStorage.getItem('guest_tasks') || '[]');
