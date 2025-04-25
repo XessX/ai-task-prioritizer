@@ -29,6 +29,9 @@ const App = () => {
 
   const getHeaders = () => {
     const currentToken = localStorage.getItem('token');
+    if (!currentToken && !guestMode) {
+      toast.error('⚠️ Please login first');
+    }
     return currentToken && !guestMode ? { Authorization: `Bearer ${currentToken}` } : {};
   };
 
