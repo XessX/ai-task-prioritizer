@@ -112,6 +112,21 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
+app.post('/api/auth/validate-token', async (req, res) => {
+  const { token } = req.body;
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: { gte: new Date() }
+      }
+    });
+    res.json({ valid: !!user });
+  } catch {
+    res.status(500).json({ valid: false });
+  }
+});
+
 app.get('/api/tasks', verifyToken, async (req, res) => {
   const tasks = await prisma.task.findMany({ where: { userId: req.user.userId }, orderBy: { createdAt: 'desc' } });
   res.json(tasks);
