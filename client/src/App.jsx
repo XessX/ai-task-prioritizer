@@ -8,6 +8,7 @@ import { fetchTasksAPI, submitTaskAPI, deleteTaskAPI } from './lib/api';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useSocket } from './hooks/useSocket';
 import { getAIClassification } from './lib/openai';
+import TaskFilter from './components/TaskFilter';
 
 const App = () => {
   const [tasks, setTasks] = useState([]);
