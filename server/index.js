@@ -1,4 +1,4 @@
-// ✅ Fully Finalized Backend Server - index.js (Complete, with Password Reset Support)
+// ✅ Fully Finalized Backend Server - index.js (Fully Fixed for Reset, Login & Register Flow)
 
 import express from 'express';
 import cors from 'cors';
@@ -45,13 +45,15 @@ const verifyToken = (req, res, next) => {
 
 app.post('/api/auth/register', async (req, res) => {
   const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
   try {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) return res.status(400).json({ error: 'User already exists' });
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({ data: { email, password: hashedPassword } });
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    res.status(201).json({ token });
+    res.status(201).json({ message: 'Registered successfully. Please login.' });
   } catch (err) {
     res.status(500).json({ error: 'Registration failed' });
   }
@@ -59,10 +61,14 @@ app.post('/api/auth/register', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
   try {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || !(await bcrypt.compare(password, user.password)))
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
     res.json({ token });
   } catch (err) {
@@ -75,15 +81,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(404).json({ error: 'User not found' });
-
     const token = crypto.randomUUID();
     const expiry = new Date(Date.now() + 3600000);
-
-    await prisma.user.update({
-      where: { email },
-      data: { resetToken: token, resetTokenExpiry: expiry }
-    });
-
+    await prisma.user.update({ where: { email }, data: { resetToken: token, resetTokenExpiry: expiry } });
     await sendResetEmail(email, token);
     res.json({ message: 'Reset email sent.' });
   } catch (err) {
@@ -94,22 +94,18 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
 app.post('/api/auth/reset-password', async (req, res) => {
   const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Missing token or password' });
   try {
     const user = await prisma.user.findFirst({
-      where: {
-        resetToken: token,
-        resetTokenExpiry: { gte: new Date() },
-      },
+      where: { resetToken: token, resetTokenExpiry: { gte: new Date() } },
     });
     if (!user) return res.status(400).json({ error: 'Invalid or expired token' });
-
     const hashed = await bcrypt.hash(password, 10);
     await prisma.user.update({
       where: { id: user.id },
       data: { password: hashed, resetToken: null, resetTokenExpiry: null },
     });
-
-    res.json({ message: 'Password reset successful' });
+    res.json({ message: 'Password reset successful. Please login.' });
   } catch (err) {
     console.error('Reset password error:', err);
     res.status(500).json({ error: 'Reset failed' });
@@ -117,10 +113,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 });
 
 app.get('/api/tasks', verifyToken, async (req, res) => {
-  const tasks = await prisma.task.findMany({
-    where: { userId: req.user.userId },
-    orderBy: { createdAt: 'desc' },
-  });
+  const tasks = await prisma.task.findMany({ where: { userId: req.user.userId }, orderBy: { createdAt: 'desc' } });
   res.json(tasks);
 });
 
@@ -149,9 +142,7 @@ app.delete('/api/tasks/:id', verifyToken, async (req, res) => {
   res.status(204).send();
 });
 
-const io = new Server(server, {
-  cors: { origin: allowedOrigins },
-});
+const io = new Server(server, { cors: { origin: allowedOrigins } });
 
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;

@@ -4,20 +4,15 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  service: 'Gmail', // Or use a custom SMTP service
+  service: 'Gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
 
-/**
- * Sends a password reset email
- * @param {string} to - Email recipient
- * @param {string} resetToken - Unique token for password reset
- */
 export const sendResetEmail = async (to, resetToken) => {
-  const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+  const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
   const mailOptions = {
     from: `"TaskAI Support" <${process.env.EMAIL_USER}>`,
@@ -26,7 +21,7 @@ export const sendResetEmail = async (to, resetToken) => {
     html: `
       <h2>Password Reset</h2>
       <p>You requested a password reset. Click below to proceed:</p>
-      <a href="${resetLink}">Reset Password</a>
+      <a href="${resetLink}" target="_blank">Reset Password</a>
       <p>This link will expire in 1 hour.</p>
     `,
   };
