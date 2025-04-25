@@ -1,13 +1,15 @@
+// src/App.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import AuthForm from './components/AuthForm';
 import TaskForm from './components/TaskForm';
 import TaskBoard from './components/TaskBoard';
 import ChartStats from './components/ChartStats';
-import TaskFilter from './components/TaskFilter'; // ✅ corrected name
+import TaskFilter from './components/TaskFilter'; // ✅ Correct import
 import { Toaster, toast } from 'react-hot-toast';
 import { fetchTasksAPI, submitTaskAPI, deleteTaskAPI } from './lib/api';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useSocket } from './hooks/useSocket';
+import { classifyTaskBackend } from './lib/openaiBackend'; // ✅ Use backend classify
 
 const App = () => {
   const [tasks, setTasks] = useState([]);
@@ -46,7 +48,17 @@ const App = () => {
     e.preventDefault();
     if (!form.title || !form.description) return toast.error('📝 Please fill all fields');
     try {
-      const payload = { ...form };
+      let payload = { ...form };
+
+      if (!form.status || !form.priority) {
+        const ai = await classifyTaskBackend(form.title, form.description, form.startDate, form.endDate);
+        payload = {
+          ...form,
+          priority: form.priority || ai.priority,
+          status: form.status || ai.status
+        };
+      }
+
       await submitTaskAPI({ form: payload, editId, guestMode, getHeaders, setTasks });
       toast.success(editId ? '✅ Task updated' : '✅ Task added');
       resetFormState();

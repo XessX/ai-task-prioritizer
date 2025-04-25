@@ -19,21 +19,21 @@ const prisma = new PrismaClient();
 const app = express();
 const server = http.createServer(app);
 
+// ➡️ CORS setup
 const allowedOrigins = [
   'http://localhost:5173',
   'https://ai-task-prioritizer.vercel.app'
 ];
-
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Health check
+// ➡️ Health check
 app.get('/', (req, res) => {
   res.send('🚀 AI Task Prioritizer Backend running');
 });
 
-// Middleware to verify token
+// ➡️ Verify Token Middleware
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized - No token provided' });
@@ -46,7 +46,7 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// ➡️ Auth Routes
+// ➡️ AUTH ROUTES
 app.post('/api/auth/register', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
@@ -82,7 +82,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// ➡️ Password Reset Flow
+// ➡️ Password Reset Routes
 app.post('/api/auth/forgot-password', async (req, res) => {
   const { email } = req.body;
   try {
@@ -140,9 +140,7 @@ app.post('/api/auth/validate-token', async (req, res) => {
   }
 });
 
-// ➡️ Task Routes
-// server/index.js
-
+// ➡️ TASK ROUTES
 app.get('/api/tasks', verifyToken, async (req, res) => {
   try {
     if (!req.user?.userId) {
@@ -161,12 +159,11 @@ app.get('/api/tasks', verifyToken, async (req, res) => {
   }
 });
 
-
 app.post('/api/tasks', verifyToken, async (req, res) => {
   const { title, description, startDate, endDate } = req.body;
-  const { priority, status } = await classifyTask(title, description, startDate, endDate);
-
   try {
+    const { priority, status } = await classifyTask(title, description, startDate, endDate);
+
     const task = await prisma.task.create({
       data: {
         title,
@@ -187,7 +184,7 @@ app.post('/api/tasks', verifyToken, async (req, res) => {
 
     res.status(201).json(task);
   } catch (err) {
-    console.error('Task creation error:', err);
+    console.error('Task creation error:', err.message);
     res.status(500).json({ error: 'Task creation failed' });
   }
 });
@@ -216,7 +213,7 @@ app.put('/api/tasks/:id', verifyToken, async (req, res) => {
 
     res.json(task);
   } catch (err) {
-    console.error('Task update error:', err);
+    console.error('Task update error:', err.message);
     res.status(500).json({ error: 'Task update failed' });
   }
 });
@@ -233,12 +230,24 @@ app.delete('/api/tasks/:id', verifyToken, async (req, res) => {
 
     res.status(204).send();
   } catch (err) {
-    console.error('Task deletion error:', err);
+    console.error('Task deletion error:', err.message);
     res.status(500).json({ error: 'Task deletion failed' });
   }
 });
 
-// ➡️ Setup WebSocket
+// ➡️ AI CLASSIFICATION ROUTE
+app.post('/api/classify', verifyToken, async (req, res) => {
+  const { title, description, startDate, endDate } = req.body;
+  try {
+    const result = await classifyTask(title, description, startDate, endDate);
+    res.json(result);
+  } catch (err) {
+    console.error('AI classify error:', err.message);
+    res.status(500).json({ error: 'Classification failed' });
+  }
+});
+
+// ➡️ SETUP SOCKET.IO
 const io = new Server(server, { cors: { origin: allowedOrigins } });
 
 io.use((socket, next) => {
@@ -257,6 +266,6 @@ io.on('connection', (socket) => {
   console.log(`Connected: ${socket.id} (User ID: ${socket.userId})`);
 });
 
-// ➡️ Start server
+// ➡️ START SERVER
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
