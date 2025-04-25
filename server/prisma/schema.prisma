@@ -5,21 +5,20 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" // or "mysql", "sqlite" — change based on your DB
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id               String   @id @default(cuid())
-  email            String   @unique
-  password         String
-  tasks            Task[]
-  resetToken       String?
-  resetTokenExpiry DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  resetToken String?    // optional for password reset
+  resetTokenExpiry DateTime? // optional for password reset
+  tasks     Task[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
-
 
 model Task {
   id          String   @id @default(cuid())
@@ -27,6 +26,8 @@ model Task {
   description String
   priority    String
   status      String
+  startDate   DateTime?
+  endDate     DateTime?
   dueDate     DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

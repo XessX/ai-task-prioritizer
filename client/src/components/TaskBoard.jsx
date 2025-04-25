@@ -1,3 +1,5 @@
+// src/components/TaskBoard.jsx
+
 import React from 'react';
 import {
   DndContext,
@@ -38,14 +40,8 @@ function SortableTask({ task, ...props }) {
   };
 
   return (
-    <div style={style}>
-      <TaskCard
-        task={task}
-        {...props}
-        dragListeners={listeners}
-        dragAttributes={attributes}
-        dragRef={setNodeRef}
-      />
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <TaskCard task={task} {...props} />
     </div>
   );
 }

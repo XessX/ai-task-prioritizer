@@ -1,6 +1,7 @@
 // src/components/TaskForm.jsx
+
 import React from 'react';
-import { CalendarDaysIcon } from '@heroicons/react/24/outline';
+import { CalendarDaysIcon } from '@heroicons/react/24/outline'; // 🗓️ Make sure you have Heroicons installed!
 
 export default function TaskForm({ form, setForm, handleSubmit, loading, editId }) {
   return (
@@ -10,25 +11,37 @@ export default function TaskForm({ form, setForm, handleSubmit, loading, editId 
         placeholder="Task title"
         value={form.title}
         onChange={(e) => setForm({ ...form, title: e.target.value })}
+        required
       />
+
       <textarea
         className="input"
         placeholder="Task description"
         value={form.description}
         onChange={(e) => setForm({ ...form, description: e.target.value })}
+        required
       />
 
-      {/* 📅 Enhanced Calendar Field with Icon */}
+      {/* 📅 Start Date */}
       <div className="relative">
         <input
           type="date"
           className="input w-full pr-10 appearance-none"
-          value={form.dueDate}
-          onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+          value={form.startDate || ''}
+          onChange={(e) => setForm({ ...form, startDate: e.target.value })}
         />
-        <CalendarDaysIcon
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none"
+        <CalendarDaysIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+      </div>
+
+      {/* 📅 End Date */}
+      <div className="relative">
+        <input
+          type="date"
+          className="input w-full pr-10 appearance-none"
+          value={form.endDate || ''}
+          onChange={(e) => setForm({ ...form, endDate: e.target.value })}
         />
+        <CalendarDaysIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
       </div>
 
       <div className="flex gap-3">

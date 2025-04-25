@@ -13,12 +13,13 @@ import { getAIClassification } from './lib/openai';
 const App = () => {
   const [tasks, setTasks] = useState([]);
   const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({ title: '', description: '', dueDate: '', status: '', priority: '' });
+  const [form, setForm] = useState({ title: '', description: '', startDate: '', endDate: '', status: '', priority: '' });
   const [user, setUser] = useState(() => (localStorage.getItem('token') ? {} : null));
   const [guestMode, setGuestMode] = useState(() => localStorage.getItem('guest_mode') === 'true');
   const [token, setToken] = useState(() => localStorage.getItem('token'));
-  useSocket(setTasks, token);
+  const [filters, setFilters] = useState({ priority: '', status: '', sortBy: '' });
 
+  useSocket(setTasks, token);
   const [authForm, setAuthForm] = useState({ email: '', password: '' });
   const [isLogin, setIsLogin] = useState(true);
   const [showReset, setShowReset] = useState(false);
@@ -32,7 +33,7 @@ const App = () => {
   };
 
   const resetFormState = () => {
-    setForm({ title: '', description: '', dueDate: '', status: '', priority: '' });
+    setForm({ title: '', description: '', startDate: '', endDate: '', status: '', priority: '' });
     setEditId(null);
   };
 
@@ -50,12 +51,11 @@ const App = () => {
     e.preventDefault();
     if (!form.title || !form.description) return toast.error('📝 Please fill all fields');
     try {
-      const ai = await getAIClassification(form.description);
+      const ai = await getAIClassification(form.title, form.description, form.startDate, form.endDate);
       const payload = {
         ...form,
         priority: form.priority || ai.priority,
         status: form.status || ai.status,
-        dueDate: form.dueDate || null
       };
       await submitTaskAPI({ form: payload, editId, guestMode, getHeaders, setTasks });
       toast.success(editId ? '✅ Task updated' : '✅ Task added');
@@ -143,6 +143,18 @@ const App = () => {
     fetchTasks();
   }, [token, guestMode]);
 
+  const filteredTasks = tasks
+    .filter(t => (filters.priority ? t.priority === filters.priority : true))
+    .filter(t => (filters.status ? t.status === filters.status : true))
+    .sort((a, b) => {
+      if (filters.sortBy === 'start') {
+        return new Date(a.startDate) - new Date(b.startDate);
+      } else if (filters.sortBy === 'end') {
+        return new Date(a.endDate) - new Date(b.endDate);
+      }
+      return 0;
+    });
+
   return (
     <>
       <Toaster />
@@ -167,15 +179,48 @@ const App = () => {
       ) : (
         <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4">
           <div className="max-w-5xl mx-auto space-y-6">
-            <header className="flex justify-between items-center">
+            <header className="flex flex-col md:flex-row justify-between items-center gap-3">
               <h1 className="text-3xl font-bold">🧠 AI Task Prioritizer</h1>
-              <div className="flex gap-3 items-center text-sm">
-                <button onClick={toggleDark} className="text-indigo-600">
-                  {darkMode ? '☀️ Light' : '🌙 Dark'}
-                </button>
+              <div className="flex gap-2 text-sm">
+                <button onClick={toggleDark} className="text-indigo-600">{darkMode ? '☀️ Light' : '🌙 Dark'}</button>
                 <button onClick={logout} className="text-red-500">Logout</button>
               </div>
             </header>
+
+            {/* 📌 Filters */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <select
+                value={filters.priority}
+                onChange={(e) => setFilters(f => ({ ...f, priority: e.target.value }))}
+                className="input"
+              >
+                <option value="">All Priorities</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+
+              <select
+                value={filters.status}
+                onChange={(e) => setFilters(f => ({ ...f, status: e.target.value }))}
+                className="input"
+              >
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+
+              <select
+                value={filters.sortBy}
+                onChange={(e) => setFilters(f => ({ ...f, sortBy: e.target.value }))}
+                className="input"
+              >
+                <option value="">No Sorting</option>
+                <option value="start">Start Date</option>
+                <option value="end">Due Date</option>
+              </select>
+            </div>
 
             <div ref={formRef}>
               <TaskForm
@@ -187,7 +232,7 @@ const App = () => {
             </div>
 
             <TaskBoard
-              tasks={tasks}
+              tasks={filteredTasks}
               setTasks={setTasks}
               setForm={(val) => {
                 setForm(val);
