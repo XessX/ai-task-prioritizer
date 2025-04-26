@@ -1,15 +1,14 @@
-// src/App.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import AuthForm from './components/AuthForm';
 import TaskForm from './components/TaskForm';
 import TaskBoard from './components/TaskBoard';
 import ChartStats from './components/ChartStats';
-import TaskFilter from './components/TaskFilter'; // ✅ Correct import
+import TaskFilter from './components/TaskFilter';
 import { Toaster, toast } from 'react-hot-toast';
 import { fetchTasksAPI, submitTaskAPI, deleteTaskAPI } from './lib/api';
+import { predictPriorityAndStatus } from './lib/ai'; // 🔥 NEW
 import { useDarkMode } from './hooks/useDarkMode';
 import { useSocket } from './hooks/useSocket';
-import { classifyTaskBackend } from './lib/openaiBackend'; // ✅ Use backend classify
 
 const App = () => {
   const [tasks, setTasks] = useState([]);
@@ -18,11 +17,15 @@ const App = () => {
   const [user, setUser] = useState(() => (localStorage.getItem('token') ? {} : null));
   const [guestMode, setGuestMode] = useState(() => localStorage.getItem('guest_mode') === 'true');
   const [token, setToken] = useState(() => localStorage.getItem('token'));
+  const [authForm, setAuthForm] = useState({ email: '', password: '' });
+  const [isLogin, setIsLogin] = useState(true);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
   const [filters, setFilters] = useState({ priority: '', status: '', sortBy: '' });
   const formRef = useRef(null);
 
   const { darkMode, toggleDark } = useDarkMode();
-  useSocket(setTasks, token);
+  useSocket(setTasks, token, guestMode);
 
   const getHeaders = () => {
     const currentToken = localStorage.getItem('token');
@@ -44,48 +47,142 @@ const App = () => {
     }
   };
 
+  useEffect(() => {
+    if (token || guestMode) fetchTasks();
+  }, [token, guestMode]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title || !form.description) return toast.error('📝 Please fill all fields');
-    try {
-      let payload = { ...form };
 
-      if (!form.status || !form.priority) {
-        const ai = await classifyTaskBackend(form.title, form.description, form.startDate, form.endDate);
-        payload = {
-          ...form,
-          priority: form.priority || ai.priority,
-          status: form.status || ai.status
+    let payload = { ...form };
+
+    // 👉 Check if needs AI prediction
+    if (!payload.priority || !payload.status) {
+      try {
+        const aiResult = await predictPriorityAndStatus({
+          title: payload.title,
+          description: payload.description,
+          startDate: payload.startDate,
+          endDate: payload.endDate
+        });
+
+        payload.priority = payload.priority || aiResult.priority;
+        payload.status = payload.status || aiResult.status;
+
+        toast.success(`✨ AI Priority: ${aiResult.priority}`);
+        toast.success(`✨ AI Status: ${aiResult.status}`);
+      } catch (err) {
+        console.error('AI Fallback error:', err.message);
+        payload.priority = payload.priority || 'medium';
+        payload.status = payload.status || 'pending';
+      }
+    }
+
+    if (guestMode) {
+      const guestTasks = JSON.parse(localStorage.getItem('guest_tasks') || '[]');
+      let updated;
+
+      if (editId) {
+        updated = guestTasks.map(task => task.id === editId ? { ...task, ...payload } : task);
+        toast.success('✅ Task updated');
+      } else {
+        const newTask = {
+          ...payload,
+          id: Date.now().toString(),
+          startDate: payload.startDate || new Date().toISOString(),
+          endDate: payload.endDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+          createdAt: new Date().toISOString()
         };
+        updated = [...guestTasks, newTask];
+        toast.success('🎯 New task added!');
       }
 
-      await submitTaskAPI({ form: payload, editId, guestMode, getHeaders, setTasks });
-      toast.success(editId ? '✅ Task updated' : '✅ Task added');
-      resetFormState();
-      fetchTasks();
-    } catch (err) {
-      console.error('❌ Submission failed:', err);
-      toast.error('Error saving task');
+      localStorage.setItem('guest_tasks', JSON.stringify(updated));
+      setTasks(updated);
+    } else {
+      try {
+        await submitTaskAPI({ form: payload, editId, guestMode, getHeaders, setTasks });
+        toast.success(editId ? '✅ Task updated' : '🎯 New task added!');
+        fetchTasks();
+      } catch (err) {
+        console.error('❌ API submit failed:', err);
+        toast.error('API Submit Failed');
+      }
     }
+    resetFormState();
   };
 
   const handleDelete = async (id) => {
-    const updated = tasks.filter(t => t.id !== id);
-    setTasks(updated);
     try {
-      await deleteTaskAPI(id, guestMode, getHeaders, setTasks);
-      toast.success('🗑️ Task deleted');
-      fetchTasks();
+      if (guestMode) {
+        const guestTasks = JSON.parse(localStorage.getItem('guest_tasks')) || [];
+        const updated = guestTasks.filter(task => task.id !== id);
+        localStorage.setItem('guest_tasks', JSON.stringify(updated));
+        setTasks(updated);
+        toast.success('🗑️ Task deleted');
+      } else {
+        await deleteTaskAPI(id, guestMode, getHeaders, setTasks);
+        toast.success('🗑️ Task deleted');
+        fetchTasks();
+      }
     } catch (err) {
       console.error('❌ Delete failed:', err);
       toast.error('Delete failed');
-      fetchTasks();
     }
   };
 
-  useEffect(() => {
-    fetchTasks();
-  }, [token, guestMode]);
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    if (!authForm.email || !authForm.password) return toast.error('📧 Email and password required');
+    try {
+      const endpoint = isLogin ? 'login' : 'register';
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(authForm)
+      }).then(r => r.json());
+
+      if (res.token) {
+        localStorage.setItem('token', res.token);
+        localStorage.removeItem('guest_mode');
+        setToken(res.token);
+        setUser({ email: authForm.email });
+        setGuestMode(false);
+        setAuthForm({ email: '', password: '' });
+        resetFormState();
+        fetchTasks();
+        toast.success('✅ Login successful');
+      } else if (res.message) {
+        toast.success(res.message);
+        setIsLogin(true);
+      } else if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.error('❌ Unexpected auth error');
+      }
+    } catch (err) {
+      console.error('❌ Auth error:', err);
+      toast.error('Authentication failed');
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!resetEmail) return toast.error('📧 Enter your email.');
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      }).then(r => r.json());
+      if (res.error) return toast.error(res.error);
+      toast.success(`🔐 Reset link sent to ${resetEmail}`);
+      setShowReset(false);
+      setResetEmail('');
+    } catch {
+      toast.error('❌ Failed to send reset link');
+    }
+  };
 
   const logout = () => {
     localStorage.clear();
@@ -94,6 +191,7 @@ const App = () => {
     setTasks([]);
     setGuestMode(false);
     resetFormState();
+    window.location.reload();
   };
 
   const filteredTasks = tasks
@@ -102,14 +200,39 @@ const App = () => {
     .sort((a, b) => {
       if (filters.sortBy === 'start') return new Date(a.startDate) - new Date(b.startDate);
       if (filters.sortBy === 'end') return new Date(a.endDate) - new Date(b.endDate);
-      return 0;
+      return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
     });
 
   return (
     <>
       <Toaster />
       {!user && !guestMode ? (
-        <AuthForm />
+        <AuthForm
+          authForm={authForm}
+          setAuthForm={setAuthForm}
+          isLogin={isLogin}
+          setIsLogin={setIsLogin}
+          showReset={showReset}
+          setShowReset={setShowReset}
+          resetEmail={resetEmail}
+          setResetEmail={setResetEmail}
+          setUser={setUser}
+          setGuestMode={(val) => {
+            setGuestMode(val);
+            if (val) {
+              if (!localStorage.getItem('guest_tasks')) {
+                localStorage.setItem('guest_tasks', '[]');
+              }
+              localStorage.setItem('guest_mode', 'true');
+              toast.success('✨ Welcome Guest Mode!');
+            }
+          }}
+          resetFormState={resetFormState}
+          handleAuthSubmit={handleAuthSubmit}
+          handlePasswordReset={handlePasswordReset}
+          toggleDark={toggleDark}
+          darkMode={darkMode}
+        />
       ) : (
         <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4">
           <div className="max-w-5xl mx-auto space-y-6">

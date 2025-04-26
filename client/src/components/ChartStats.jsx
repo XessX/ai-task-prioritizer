@@ -1,4 +1,5 @@
-// ✅ Updated ChartStats.jsx with Better Colors and Layout
+// 📄 src/components/ChartStats.jsx - FINAL FIXED VERSION
+
 import React from 'react';
 import {
   BarChart,
@@ -18,14 +19,17 @@ export default function ChartStats({ tasks }) {
   const priorities = ['low', 'medium', 'high'];
   const statuses = ['pending', 'in_progress', 'completed'];
 
+  // ✅ Filter tasks to only include valid priority and status
+  const validTasks = tasks.filter(t => t.priority && t.status);
+
   const priorityData = priorities.map((p) => ({
     name: p.charAt(0).toUpperCase() + p.slice(1),
-    value: tasks.filter((t) => t.priority === p).length,
+    value: validTasks.filter((t) => t.priority === p).length,
   }));
 
   const statusData = statuses.map((s) => ({
     name: s.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-    value: tasks.filter((t) => t.status === s).length,
+    value: validTasks.filter((t) => t.status === s).length,
   }));
 
   const COLORS = ['#34D399', '#FBBF24', '#F87171'];
@@ -34,7 +38,7 @@ export default function ChartStats({ tasks }) {
     <div className="grid md:grid-cols-2 gap-6">
       {/* 📊 Priority Bar Chart */}
       <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-        <h3 className="text-lg font-semibold mb-2">🚦 Priority Distribution</h3>
+        <h3 className="text-lg font-semibold mb-4">🚦 Priority Distribution</h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={priorityData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -43,7 +47,7 @@ export default function ChartStats({ tasks }) {
             <Tooltip />
             <Bar dataKey="value">
               {priorityData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell key={`priority-bar-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Bar>
           </BarChart>
@@ -52,7 +56,7 @@ export default function ChartStats({ tasks }) {
 
       {/* 📈 Status Pie Chart */}
       <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-        <h3 className="text-lg font-semibold mb-2">📌 Status Overview</h3>
+        <h3 className="text-lg font-semibold mb-4">📌 Status Overview</h3>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
@@ -65,7 +69,7 @@ export default function ChartStats({ tasks }) {
               label
             >
               {statusData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell key={`status-pie-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
             <Tooltip />
