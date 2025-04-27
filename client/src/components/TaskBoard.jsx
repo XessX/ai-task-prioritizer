@@ -6,16 +6,15 @@ import {
   useSensors,
   closestCenter,
 } from '@dnd-kit/core';
-
 import {
   arrayMove,
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-
 import { CSS } from '@dnd-kit/utilities';
 import TaskCard from './TaskCard';
+import { markTaskCompletedAPI, markTaskInProgressAPI } from '../lib/api'; // ✅ Import
 
 const statuses = {
   pending: '🕒 Pending',
@@ -23,7 +22,7 @@ const statuses = {
   completed: '✅ Completed',
 };
 
-// 📦 Sortable Task wrapper
+// 📦 Sortable wrapper
 function SortableTask({ task, setForm, setEditId, handleDelete, handleComplete, handleMoveToProgress }) {
   const { setNodeRef, attributes, listeners, transform, transition } = useSortable({ id: task.id });
 
@@ -50,35 +49,63 @@ function SortableTask({ task, setForm, setEditId, handleDelete, handleComplete, 
 
 export default function TaskBoard({ tasks, setTasks, setForm, setEditId, handleDelete }) {
   const sensors = useSensors(useSensor(PointerSensor));
+  const guestMode = localStorage.getItem('guest_mode') === 'true';
 
-  // ✅ Complete handler
-  const handleComplete = (id) => {
-    const updated = tasks.map(t => (t.id === id ? { ...t, status: 'completed' } : t));
-    setTasks(updated);
-    if (localStorage.getItem('guest_mode') === 'true') {
-      localStorage.setItem('guest_tasks', JSON.stringify(updated));
+  const getHeaders = () => {
+    const token = localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  // ✅ Complete Handler (AUTO FADE after few sec)
+  const handleComplete = async (id) => {
+    try {
+      if (guestMode) {
+        const updated = tasks.map(t => (t.id === id ? { ...t, status: 'completed' } : t));
+        setTasks(updated);
+        localStorage.setItem('guest_tasks', JSON.stringify(updated));
+
+        setTimeout(() => {
+          const filtered = updated.filter(t => t.id !== id);
+          setTasks(filtered);
+          localStorage.setItem('guest_tasks', JSON.stringify(filtered));
+        }, 3000); // ✨ 3 seconds
+      } else {
+        await markTaskCompletedAPI(id, guestMode, getHeaders, setTasks);
+
+        setTimeout(() => {
+          setTasks(prev => prev.filter(t => t.id !== id));
+        }, 3000); // ✨ 3 seconds
+      }
+    } catch (err) {
+      console.error('Failed to complete task:', err);
     }
   };
 
-  // ✅ Move to "In Progress" handler
-  const handleMoveToProgress = (id) => {
-    const updated = tasks.map(t => (t.id === id ? { ...t, status: 'in_progress' } : t));
-    setTasks(updated);
-    if (localStorage.getItem('guest_mode') === 'true') {
-      localStorage.setItem('guest_tasks', JSON.stringify(updated));
+  // ✅ Move to In Progress
+  const handleMoveToProgress = async (id) => {
+    try {
+      if (guestMode) {
+        const updated = tasks.map(t => (t.id === id ? { ...t, status: 'in_progress' } : t));
+        setTasks(updated);
+        localStorage.setItem('guest_tasks', JSON.stringify(updated));
+      } else {
+        await markTaskInProgressAPI(id, guestMode, getHeaders, setTasks);
+      }
+    } catch (err) {
+      console.error('Failed to move task to in progress:', err);
     }
   };
 
+  // ✅ Drag and Drop
   const handleDragEnd = ({ active, over }) => {
     if (!over) return;
     const oldIndex = tasks.findIndex(t => t.id === active.id);
     const newIndex = tasks.findIndex(t => t.id === over.id);
-
     if (oldIndex !== -1 && newIndex !== -1) {
       const updatedTasks = arrayMove(tasks, oldIndex, newIndex);
       setTasks(updatedTasks);
 
-      if (localStorage.getItem('guest_mode') === 'true') {
+      if (guestMode) {
         localStorage.setItem('guest_tasks', JSON.stringify(updatedTasks));
       }
     }
@@ -94,11 +121,7 @@ export default function TaskBoard({ tasks, setTasks, setForm, setEditId, handleD
         {Object.entries(statuses).map(([key, label]) => {
           const list = tasks
             .filter(task => task.status === key)
-            .sort((a, b) => {
-              const aProgress = getTaskProgress(a);
-              const bProgress = getTaskProgress(b);
-              return bProgress - aProgress; // 📈 Higher progress first
-            });
+            .sort((a, b) => getTaskProgress(b) - getTaskProgress(a));
 
           return (
             <div key={key}>
@@ -114,7 +137,7 @@ export default function TaskBoard({ tasks, setTasks, setForm, setEditId, handleD
                         setEditId={setEditId}
                         handleDelete={handleDelete}
                         handleComplete={handleComplete}
-                        handleMoveToProgress={handleMoveToProgress} // 💡 pass move to progress
+                        handleMoveToProgress={handleMoveToProgress}
                       />
                     ))
                   ) : (
@@ -130,7 +153,7 @@ export default function TaskBoard({ tasks, setTasks, setForm, setEditId, handleD
   );
 }
 
-// 🧠 Helper to calculate task progress
+// 🧠 Progress Helper
 function getTaskProgress(task) {
   const now = new Date();
   const start = task.startDate ? new Date(task.startDate) : null;
