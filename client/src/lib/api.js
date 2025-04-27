@@ -21,7 +21,7 @@ export const fetchTasksAPI = async (guestMode, getHeaders) => {
       return [];
     }
 
-    const res = await fetch(`${BASE_API}/api/tasks`, { headers });
+    const res = await fetch(`${BASE_API}/tasks`, { headers });
 
     if (!res.ok) throw new Error('Unauthorized or server error');
 
@@ -63,7 +63,7 @@ export const submitTaskAPI = async ({ form, editId, guestMode, getHeaders, setTa
     ...getHeaders()
   };
 
-  const url = editId ? `${BASE_API}/api/tasks/${editId}` : `${BASE_API}/api/tasks`;  // ✅ Correct here
+  const url = editId ? `${BASE_API}/tasks/${editId}` : `${BASE_API}/api/tasks`;  // ✅ Correct here
 
   const res = await fetch(url, {
     method: editId ? 'PUT' : 'POST',
@@ -85,7 +85,7 @@ export const deleteTaskAPI = async (id, guestMode, getHeaders, setTasks) => {
   }
 
   const headers = getHeaders();
-  const res = await fetch(`${BASE_API}/api/tasks/${id}`, {   // ✅ Correct here
+  const res = await fetch(`${BASE_API}/tasks/${id}`, {   // ✅ Correct here
     method: 'DELETE',
     headers
   });
