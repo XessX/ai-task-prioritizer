@@ -139,7 +139,7 @@ const App = () => {
     if (!authForm.email || !authForm.password) return toast.error('📧 Email and password required');
     try {
       const endpoint = isLogin ? 'login' : 'register';
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/${endpoint}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(authForm)
@@ -172,7 +172,7 @@ const App = () => {
   const handlePasswordReset = async () => {
     if (!resetEmail) return toast.error('📧 Enter your email.');
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/forgot-password`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: resetEmail }),
