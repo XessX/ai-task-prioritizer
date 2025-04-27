@@ -63,7 +63,7 @@ export const submitTaskAPI = async ({ form, editId, guestMode, getHeaders, setTa
     ...getHeaders()
   };
 
-  const url = editId ? `${BASE_API}/tasks/${editId}` : `${BASE_API}/api/tasks`;  // ✅ Correct here
+  const url = editId ? `${BASE_API}/tasks/${editId}` : `${BASE_API}/tasks`;  // ✅ Correct here
 
   const res = await fetch(url, {
     method: editId ? 'PUT' : 'POST',

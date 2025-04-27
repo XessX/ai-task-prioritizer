@@ -10,7 +10,7 @@ const getToken = () => {
 // 🎯 Predict Priority and Status using AI
 export const predictPriorityAndStatus = async ({ title, description, startDate, endDate }) => {
   try {
-    const response = await fetch(`${API_URL}/api/classify`, {  // ✅ Keep /api/classify
+    const response = await fetch(`${API_URL}/classify`, {  // ✅ Keep /api/classify
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
