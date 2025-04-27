@@ -1,4 +1,4 @@
-// 📄 src/components/TaskForm.jsx - FINAL POLISHED VERSION
+// 📄 src/components/TaskForm.jsx - FINAL PERFECT VERSION
 
 import React, { useEffect, useState } from 'react';
 import { CalendarDaysIcon } from '@heroicons/react/24/outline';
@@ -30,17 +30,17 @@ export default function TaskForm({ form, setForm, handleSubmit, loading, editId 
         }));
 
         if (!userOverridden.priority || !userOverridden.status) {
-          toast.success(`🧠 AI set ➔ Priority: ${result.priority.toUpperCase()} | Status: ${result.status.replace('_', ' ')}`);
+          toast.success(`🧠 AI ➔ Priority: ${result.priority.toUpperCase()} | Status: ${result.status.replace('_', ' ')}`);
         }
       } catch (err) {
         console.error('❌ AI Prediction failed:', err);
       } finally {
         setAiThinking(false);
       }
-    }, 600); // smooth debounce
+    }, 600); // Typing delay debounce
 
     return () => clearTimeout(delayDebounce);
-  }, [form.title, form.description, form.startDate, form.endDate]);
+  }, [form.title, form.description, form.startDate, form.endDate, userOverridden.priority, userOverridden.status, setForm]);
 
   const onFieldChange = (field, value) => {
     if (field === 'priority') setUserOverridden(prev => ({ ...prev, priority: true }));
@@ -81,7 +81,7 @@ export default function TaskForm({ form, setForm, handleSubmit, loading, editId 
         />
       </div>
 
-      {/* Dates (Start and End) */}
+      {/* Dates */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-semibold mb-1">📅 Start Date</label>
@@ -110,7 +110,7 @@ export default function TaskForm({ form, setForm, handleSubmit, loading, editId 
         </div>
       </div>
 
-      {/* Priority and Status Selectors */}
+      {/* Status and Priority */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-semibold mb-1">📌 Status</label>

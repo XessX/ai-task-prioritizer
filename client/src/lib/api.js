@@ -1,7 +1,13 @@
+// 📄 src/lib/api.js - FINAL CORRECTED VERSION
+
 const BASE_API = import.meta.env.VITE_API_URL;
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const OPENAI_ENDPOINT = import.meta.env.VITE_OPENAI_ENDPOINT;
 
+// Helper to fetch token
+const getToken = () => localStorage.getItem('token');
+
+// 🔥 Fetch Tasks
 export const fetchTasksAPI = async (guestMode, getHeaders) => {
   try {
     if (guestMode) {
@@ -15,7 +21,7 @@ export const fetchTasksAPI = async (guestMode, getHeaders) => {
       return [];
     }
 
-    const res = await fetch(`${BASE_API}/tasks`, { headers });
+    const res = await fetch(`${BASE_API}/api/tasks`, { headers });
 
     if (!res.ok) throw new Error('Unauthorized or server error');
 
@@ -26,6 +32,7 @@ export const fetchTasksAPI = async (guestMode, getHeaders) => {
   }
 };
 
+// 🔥 Submit (Create or Update) Task
 export const submitTaskAPI = async ({ form, editId, guestMode, getHeaders, setTasks }) => {
   if (guestMode) {
     const guest = JSON.parse(localStorage.getItem('guest_tasks') || '[]');
@@ -56,7 +63,7 @@ export const submitTaskAPI = async ({ form, editId, guestMode, getHeaders, setTa
     ...getHeaders()
   };
 
-  const url = editId ? `${BASE_API}/tasks/${editId}` : `${BASE_API}/tasks`;
+  const url = editId ? `${BASE_API}/api/tasks/${editId}` : `${BASE_API}/api/tasks`;  // ✅ Correct here
 
   const res = await fetch(url, {
     method: editId ? 'PUT' : 'POST',
@@ -67,6 +74,7 @@ export const submitTaskAPI = async ({ form, editId, guestMode, getHeaders, setTa
   if (!res.ok) throw new Error('Submit task failed');
 };
 
+// 🔥 Delete Task
 export const deleteTaskAPI = async (id, guestMode, getHeaders, setTasks) => {
   if (guestMode) {
     const guest = JSON.parse(localStorage.getItem('guest_tasks') || '[]');
@@ -77,7 +85,7 @@ export const deleteTaskAPI = async (id, guestMode, getHeaders, setTasks) => {
   }
 
   const headers = getHeaders();
-  const res = await fetch(`${BASE_API}/tasks/${id}`, {
+  const res = await fetch(`${BASE_API}/api/tasks/${id}`, {   // ✅ Correct here
     method: 'DELETE',
     headers
   });
@@ -85,19 +93,19 @@ export const deleteTaskAPI = async (id, guestMode, getHeaders, setTasks) => {
   if (!res.ok) throw new Error('Failed to delete task');
 };
 
-// 🧠✨ New Function: Ask OpenAI to suggest Priority & Status
+// 🧠✨ New Function: Ask OpenAI to prioritize
 export const askOpenAIToPrioritizeTask = async (title, description, startDate, endDate) => {
   try {
     const prompt = `
 You are an expert task prioritizer.
 
-Analyze the task based on:
+Analyze:
 - Title: "${title}"
 - Description: "${description}"
 - Start Date: "${startDate || 'Not set'}"
 - End Date: "${endDate || 'Not set'}"
 
-Return only in JSON:
+Return clean JSON:
 {
   "priority": "low" | "medium" | "high",
   "status": "pending" | "in_progress" | "completed"

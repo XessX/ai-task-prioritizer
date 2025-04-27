@@ -1,4 +1,4 @@
-// server/services/aiClassifier.js
+// 📄 server/services/aiClassifier.js
 
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
@@ -10,7 +10,7 @@ export const classifyTask = async (title, description, startDate, endDate) => {
   const prompt = `
 You are an AI assistant helping to classify tasks intelligently.
 
-Analyze the following:
+Analyze:
 - Title: ${title || 'N/A'}
 - Description: ${description || 'N/A'}
 - Start Date: ${startDate || 'N/A'}
@@ -22,27 +22,23 @@ Analyze the following:
   "status": "pending" | "in_progress" | "completed"
 }
 
-Guidelines:
-
-Priority:
+Rules:
 - If endDate is today or tomorrow → "high"
 - If due within 3 days → "medium"
-- If description mentions "urgent", "ASAP", "in 1 day", "next week" → "high"
-- Otherwise → "low"
+- If description says "urgent", "ASAP", "1 day", "next week" → "high"
+- Else → "low"
+- StartDate after today → "pending"
+- Ongoing → "in_progress"
+- Title/Description contains "completed", "submitted", "done" → "completed"
 
-Status:
-- If startDate is after today → "pending"
-- If ongoing (started) → "in_progress"
-- If description or title contains "completed", "submitted", "done" → "completed"
-
-⚠️ Only output clean JSON without any explanation.
+⚠️ Only clean JSON output!
 `;
 
   try {
     const result = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.1, // Stable deterministic behavior
+      temperature: 0.1,
       timeout: 10000,
     });
 
@@ -56,7 +52,6 @@ Status:
   } catch (err) {
     console.error('❌ AI Classifier fallback triggered:', err.message);
 
-    // 🛡️ Manual emergency fallback (if OpenAI fails)
     const today = new Date();
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
@@ -64,7 +59,6 @@ Status:
     let fallbackPriority = 'medium';
     let fallbackStatus = 'pending';
 
-    // Calculate Days Left if endDate exists
     if (end) {
       const daysLeft = (end - today) / (1000 * 60 * 60 * 24);
       if (daysLeft <= 1) fallbackPriority = 'high';
@@ -72,7 +66,6 @@ Status:
       else fallbackPriority = 'low';
     }
 
-    // Look inside description for urgency
     const text = (title + ' ' + description).toLowerCase();
     if (text.includes('urgent') || text.includes('asap') || text.includes('1 day') || text.includes('next week')) {
       fallbackPriority = 'high';

@@ -1,4 +1,4 @@
-// 📄 src/components/ChartStats.jsx - FINAL FIXED VERSION
+// 📄 src/components/ChartStats.jsx - FINAL SUPER CLEAN VERSION
 
 import React from 'react';
 import {
@@ -19,20 +19,20 @@ export default function ChartStats({ tasks }) {
   const priorities = ['low', 'medium', 'high'];
   const statuses = ['pending', 'in_progress', 'completed'];
 
-  // ✅ Filter tasks to only include valid priority and status
+  // ✅ Filter tasks to only include ones that have valid priority and status
   const validTasks = tasks.filter(t => t.priority && t.status);
 
-  const priorityData = priorities.map((p) => ({
-    name: p.charAt(0).toUpperCase() + p.slice(1),
-    value: validTasks.filter((t) => t.priority === p).length,
+  const priorityData = priorities.map((priority) => ({
+    name: priority.charAt(0).toUpperCase() + priority.slice(1),
+    value: validTasks.filter(task => task.priority === priority).length,
   }));
 
-  const statusData = statuses.map((s) => ({
-    name: s.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-    value: validTasks.filter((t) => t.status === s).length,
+  const statusData = statuses.map((status) => ({
+    name: status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+    value: validTasks.filter(task => task.status === status).length,
   }));
 
-  const COLORS = ['#34D399', '#FBBF24', '#F87171'];
+  const COLORS = ['#34D399', '#FBBF24', '#F87171']; // Green, Yellow, Red
 
   return (
     <div className="grid md:grid-cols-2 gap-6">

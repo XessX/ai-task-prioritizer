@@ -6,7 +6,7 @@ import ChartStats from './components/ChartStats';
 import TaskFilter from './components/TaskFilter';
 import { Toaster, toast } from 'react-hot-toast';
 import { fetchTasksAPI, submitTaskAPI, deleteTaskAPI } from './lib/api';
-import { predictPriorityAndStatus } from './lib/ai'; // 🔥 NEW
+import { predictPriorityAndStatus } from './lib/ai';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useSocket } from './hooks/useSocket';
 
@@ -22,8 +22,9 @@ const App = () => {
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [filters, setFilters] = useState({ priority: '', status: '', sortBy: '' });
-  const formRef = useRef(null);
+  const [loadingSubmit, setLoadingSubmit] = useState(false); // ✅ Add spinner control
 
+  const formRef = useRef(null);
   const { darkMode, toggleDark } = useDarkMode();
   useSocket(setTasks, token, guestMode);
 
@@ -55,28 +56,28 @@ const App = () => {
     e.preventDefault();
     if (!form.title || !form.description) return toast.error('📝 Please fill all fields');
 
+    setLoadingSubmit(true);
+
     let payload = { ...form };
 
-    // 👉 Check if needs AI prediction
-    if (!payload.priority || !payload.status) {
-      try {
-        const aiResult = await predictPriorityAndStatus({
-          title: payload.title,
-          description: payload.description,
-          startDate: payload.startDate,
-          endDate: payload.endDate
-        });
+    try {
+      // Always predict fresh (better than checking if priority or status exist)
+      const aiResult = await predictPriorityAndStatus({
+        title: payload.title,
+        description: payload.description,
+        startDate: payload.startDate,
+        endDate: payload.endDate
+      });
 
-        payload.priority = payload.priority || aiResult.priority;
-        payload.status = payload.status || aiResult.status;
+      payload.priority = aiResult.priority;
+      payload.status = aiResult.status;
 
-        toast.success(`✨ AI Priority: ${aiResult.priority}`);
-        toast.success(`✨ AI Status: ${aiResult.status}`);
-      } catch (err) {
-        console.error('AI Fallback error:', err.message);
-        payload.priority = payload.priority || 'medium';
-        payload.status = payload.status || 'pending';
-      }
+      toast.success(`✨ AI Priority: ${aiResult.priority}`);
+      toast.success(`✨ AI Status: ${aiResult.status}`);
+    } catch (err) {
+      console.error('AI fallback:', err.message);
+      payload.priority = 'medium';
+      payload.status = 'pending';
     }
 
     if (guestMode) {
@@ -111,6 +112,7 @@ const App = () => {
       }
     }
     resetFormState();
+    setLoadingSubmit(false);
   };
 
   const handleDelete = async (id) => {
@@ -252,6 +254,7 @@ const App = () => {
                 setForm={setForm}
                 handleSubmit={handleSubmit}
                 editId={editId}
+                loading={loadingSubmit} // Pass loading to form
               />
             </div>
 
