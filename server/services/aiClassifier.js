@@ -7,70 +7,85 @@ dotenv.config();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export const classifyTask = async (title, description, startDate, endDate) => {
+  const today = new Date();
+  const start = startDate ? new Date(startDate) : null;
+  const end = endDate ? new Date(endDate) : null;
+
   const prompt = `
-You are an AI assistant helping to classify tasks intelligently.
-
+You are a task classification AI.
 Analyze:
-- Title: ${title || 'N/A'}
-- Description: ${description || 'N/A'}
-- Start Date: ${startDate || 'N/A'}
-- End Date: ${endDate || 'N/A'}
 
-👉 Output ONLY a JSON like:
+- Title: "${title || 'N/A'}"
+- Description: "${description || 'N/A'}"
+- Start Date: "${startDate || 'N/A'}"
+- End Date: "${endDate || 'N/A'}"
+
+Rules:
+✅ Priority:
+- End Date today or tomorrow → "high"
+- Due within 3 days → "medium"
+- Later than 3 days → "low"
+- If text mentions "tomorrow", "now", urgent", "ASAP", "today", "soon" → force "high"
+- If description includes large numbers (>=20) → boost priority by one level
+
+✅ Status:
+- If "completed", "submitted", "done" → "completed"
+- If start date is today or earlier → "in_progress"
+- Else → "pending"
+
+❗ Output ONLY valid clean JSON like:
 {
   "priority": "low" | "medium" | "high",
   "status": "pending" | "in_progress" | "completed"
 }
-
-Rules:
-- If endDate is today or tomorrow → "high"
-- If due within 3 days → "medium"
-- If description says "urgent", "ASAP", "1 day", "next week" → "high"
-- Else → "low"
-- StartDate after today → "pending"
-- Ongoing → "in_progress"
-- Title/Description contains "completed", "submitted", "done" → "completed"
-
-⚠️ Only clean JSON output!
 `;
 
   try {
     const result = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.1,
-      timeout: 10000,
     });
 
-    const match = result.choices[0]?.message?.content.match(/{[\s\S]*}/);
-    const json = match ? JSON.parse(match[0]) : {};
+    const content = result.choices?.[0]?.message?.content || '';
+    const match = content.match(/{[\s\S]*}/);
+    if (!match) throw new Error('Invalid AI JSON output');
 
+    const parsed = JSON.parse(match[0]);
     return {
-      priority: json.priority || 'medium',
-      status: json.status || 'pending',
+      priority: parsed.priority || 'medium',
+      status: parsed.status || 'pending',
     };
   } catch (err) {
-    console.error('❌ AI Classifier fallback triggered:', err.message);
+    console.error('❌ AI fallback triggered:', err.message);
 
-    const today = new Date();
-    const start = startDate ? new Date(startDate) : null;
-    const end = endDate ? new Date(endDate) : null;
-
-    let fallbackPriority = 'medium';
+    // 🧠 Improved Fallback
+    let fallbackPriority = 'low';
     let fallbackStatus = 'pending';
 
     if (end) {
-      const daysLeft = (end - today) / (1000 * 60 * 60 * 24);
+      const daysLeft = Math.floor((end - today) / (1000 * 60 * 60 * 24));
       if (daysLeft <= 1) fallbackPriority = 'high';
       else if (daysLeft <= 3) fallbackPriority = 'medium';
       else fallbackPriority = 'low';
     }
 
     const text = (title + ' ' + description).toLowerCase();
-    if (text.includes('urgent') || text.includes('asap') || text.includes('1 day') || text.includes('next week')) {
+
+    // Urgency keywords
+    if (text.includes('urgent') || text.includes('asap') || text.includes('today') || text.includes('soon') || text.includes('tomorrow')) {
       fallbackPriority = 'high';
     }
 
+    // Numbers detected → boost priority
+    const numbers = description.match(/\d+/g)?.map(Number) || [];
+    const largeNumbers = numbers.filter(num => num >= 20);
+    if (largeNumbers.length > 0) {
+      if (fallbackPriority === 'low') fallbackPriority = 'medium';
+      else if (fallbackPriority === 'medium') fallbackPriority = 'high';
+    }
+
+    // Status
     if (text.includes('completed') || text.includes('submitted') || text.includes('done')) {
       fallbackStatus = 'completed';
     } else if (start && start <= today) {
