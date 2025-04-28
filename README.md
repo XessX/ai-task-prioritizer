@@ -121,7 +121,7 @@ VITE_OPENAI_ENDPOINT=https://api.openai.com/v1/chat/completions
 
 ## 📄 License
 
-MIT License © 2024 — Built with ❤️ by **Al Jubair Hossain**
+MIT License © 2025 — Built with ❤️ by **Al Jubair Hossain**
 
 ---
 
@@ -133,7 +133,6 @@ Feel free to [open an issue](https://github.com/your_username/ai-task-prioritize
 
 ## 🛡️ Bonus Features Coming
 
-- Add "**Install App**" PWA prompt.
 - Add Open Graph metadata (better link previews).
 - Add Google Analytics.
 
