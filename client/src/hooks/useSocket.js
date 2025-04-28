@@ -1,27 +1,27 @@
-// 📄 src/hooks/useSocket.js
-
+// src/hooks/useSocket.js
 import { useEffect } from 'react';
 import { io } from 'socket.io-client';
 
 export const useSocket = (setTasks, token, guestMode) => {
   useEffect(() => {
-    if (!token || guestMode) return; // 🛡️ Don't connect if guest or no token
+    if (!token || guestMode) return; // 🛡️ Skip socket for guests
 
-    // ✨ Build correct Socket URL
+    // Build correct socket URL
     const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-    let baseSocketUrl = apiBaseUrl.replace('/api', '');
+    let socketBaseUrl = apiBaseUrl.replace('/api', '');
 
-    // Fix for production (vercel + railway)
-    if (baseSocketUrl.startsWith('https://')) {
-      baseSocketUrl = baseSocketUrl.replace('https://', 'wss://');
-    } else if (baseSocketUrl.startsWith('http://')) {
-      baseSocketUrl = baseSocketUrl.replace('http://', 'ws://');
+    // For production - use WebSocket (wss://)
+    if (socketBaseUrl.startsWith('https://')) {
+      socketBaseUrl = socketBaseUrl.replace('https://', 'wss://');
+    } else if (socketBaseUrl.startsWith('http://')) {
+      socketBaseUrl = socketBaseUrl.replace('http://', 'ws://');
     }
 
-    const socket = io(baseSocketUrl, {
+    const socket = io(socketBaseUrl, {
       transports: ['websocket'],
       auth: { token },
       reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
       timeout: 10000,
     });
 
@@ -35,7 +35,7 @@ export const useSocket = (setTasks, token, guestMode) => {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('🔴 Socket.IO connection error:', error.message || error);
+      console.error('🔴 Socket connection error:', error.message || error);
     });
 
     socket.on('disconnect', (reason) => {
@@ -43,8 +43,10 @@ export const useSocket = (setTasks, token, guestMode) => {
     });
 
     return () => {
-      socket.disconnect();
-      console.log('🔴 Socket manually disconnected');
+      if (socket) {
+        socket.disconnect();
+        console.log('🔴 Socket manually disconnected');
+      }
     };
   }, [token, guestMode, setTasks]);
 };

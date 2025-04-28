@@ -18,22 +18,40 @@ dotenv.config();
 const prisma = new PrismaClient();
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: ['http://localhost:5173', 'https://ai-task-prioritizer.vercel.app'] } });
 
-// ➡️ Middlewares
-app.use(cors({ origin: ['http://localhost:5173', 'https://ai-task-prioritizer.vercel.app'], credentials: true }));
+const allowedOrigins = [
+  'http://localhost:5173',         // Dev
+  'https://ai-task-prioritizer.vercel.app' // Prod
+];
+
+// ➡️ Global middlewares
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 app.use(express.json());
 app.use(morgan('dev'));
 
-// ➡️ Health Check
-app.get('/', (req, res) => {
-  res.send('🚀 AI Task Prioritizer Backend Running!');
+// ➡️ Initialize Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true
+  }
 });
 
-// ➡️ Token Verification Middleware
+// ➡️ Health Check
+app.get('/', (req, res) => {
+  res.send('🚀 AI Task Prioritizer Backend is Alive!');
+});
+
+// ➡️ Middleware to Verify JWT
 const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized - No token provided' });
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'Unauthorized - No token provided' });
+
+  const token = authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized - No token found' });
 
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
@@ -43,20 +61,22 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// ➡️ AUTH Routes
+// ====================
+// ➡️ AUTH ROUTES
+// ====================
 
 app.post('/api/auth/register', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
 
   try {
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) return res.status(400).json({ error: 'User already exists' });
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) return res.status(400).json({ error: 'User already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     await prisma.user.create({ data: { email, password: hashedPassword } });
 
-    res.status(201).json({ message: 'Registered successfully. Please login.' });
+    res.status(201).json({ message: 'Registered successfully!' });
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Registration failed' });
@@ -73,7 +93,6 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-
     res.json({ token });
   } catch (err) {
     console.error('Login error:', err);
@@ -81,15 +100,15 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Forgot password
 app.post('/api/auth/forgot-password', async (req, res) => {
   const { email } = req.body;
-
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const token = crypto.randomUUID();
-    const expiry = new Date(Date.now() + 3600000); // 1 hour
+    const expiry = new Date(Date.now() + 3600000);
 
     await prisma.user.update({
       where: { email },
@@ -97,13 +116,14 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     });
 
     await sendResetEmail(email, token);
-    res.json({ message: 'Reset email sent' });
+    res.json({ message: 'Reset email sent.' });
   } catch (err) {
     console.error('Forgot password error:', err);
-    res.status(500).json({ error: 'Reset process failed' });
+    res.status(500).json({ error: 'Reset failed' });
   }
 });
 
+// Reset password
 app.post('/api/auth/reset-password', async (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) return res.status(400).json({ error: 'Missing token or password' });
@@ -121,13 +141,14 @@ app.post('/api/auth/reset-password', async (req, res) => {
       data: { password: hashedPassword, resetToken: null, resetTokenExpiry: null }
     });
 
-    res.json({ message: 'Password reset successful. Please login.' });
+    res.json({ message: 'Password reset successful' });
   } catch (err) {
     console.error('Reset password error:', err);
     res.status(500).json({ error: 'Reset failed' });
   }
 });
 
+// Validate token
 app.post('/api/auth/validate-token', async (req, res) => {
   const { token } = req.body;
   try {
@@ -140,7 +161,9 @@ app.post('/api/auth/validate-token', async (req, res) => {
   }
 });
 
-// ➡️ TASK Routes
+// ====================
+// ➡️ TASK ROUTES
+// ====================
 
 app.get('/api/tasks', verifyToken, async (req, res) => {
   try {
@@ -150,8 +173,8 @@ app.get('/api/tasks', verifyToken, async (req, res) => {
     });
     res.json(tasks);
   } catch (err) {
-    console.error('Error fetching tasks:', err.message);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Fetching tasks error:', err);
+    res.status(500).json({ error: 'Fetching tasks failed' });
   }
 });
 
@@ -181,25 +204,17 @@ app.post('/api/tasks', verifyToken, async (req, res) => {
 
     res.status(201).json(task);
   } catch (err) {
-    console.error('Task creation error:', err.message);
+    console.error('Task creation error:', err);
     res.status(500).json({ error: 'Task creation failed' });
   }
 });
 
 app.put('/api/tasks/:id', verifyToken, async (req, res) => {
   const { title, description, startDate, endDate, status, priority } = req.body;
-
   try {
-    const task = await prisma.task.update({
+    await prisma.task.update({
       where: { id: req.params.id },
-      data: {
-        title,
-        description,
-        startDate: startDate ? new Date(startDate) : undefined,
-        endDate: endDate ? new Date(endDate) : undefined,
-        status,
-        priority
-      }
+      data: { title, description, startDate, endDate, status, priority }
     });
 
     const tasks = await prisma.task.findMany({
@@ -209,9 +224,9 @@ app.put('/api/tasks/:id', verifyToken, async (req, res) => {
 
     io.to(req.user.userId).emit('tasks:update', tasks);
 
-    res.json(task);
+    res.json({ message: 'Task updated' });
   } catch (err) {
-    console.error('Task update error:', err.message);
+    console.error('Task update error:', err);
     res.status(500).json({ error: 'Task update failed' });
   }
 });
@@ -229,28 +244,33 @@ app.delete('/api/tasks/:id', verifyToken, async (req, res) => {
 
     res.status(204).send();
   } catch (err) {
-    console.error('Task deletion error:', err.message);
+    console.error('Task deletion error:', err);
     res.status(500).json({ error: 'Task deletion failed' });
   }
 });
 
-// ➡️ AI Classify Endpoint
+// ====================
+// ➡️ AI Classification Route
+// ====================
+
 app.post('/api/classify', verifyToken, async (req, res) => {
   const { title, description, startDate, endDate } = req.body;
-
   try {
     const result = await classifyTask(title, description, startDate, endDate);
     res.json(result);
   } catch (err) {
-    console.error('AI classify error:', err.message);
+    console.error('AI classify error:', err);
     res.status(500).json({ error: 'Classification failed' });
   }
 });
 
-// ➡️ SOCKET.IO SETUP
+// ====================
+// ➡️ SOCKET.IO Middleware
+// ====================
+
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
-  if (!token) return next(new Error('Unauthorized'));
+  if (!token) return next(new Error('Unauthorized socket'));
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) return next(new Error('Invalid token'));
@@ -261,9 +281,11 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  console.log(`✅ Socket connected: ${socket.id} (User ID: ${socket.userId})`);
+  console.log(`🟢 Socket connected: ${socket.id} (User: ${socket.userId})`);
 });
 
-// ➡️ START SERVER
+// ➡️ Start Server
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});

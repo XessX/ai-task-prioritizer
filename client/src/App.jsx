@@ -61,20 +61,25 @@ const App = () => {
     let payload = { ...form };
 
     try {
-      const aiResult = await predictPriorityAndStatus({
-        title: payload.title,
-        description: payload.description,
-        startDate: payload.startDate,
-        endDate: payload.endDate
-      });
+      if (!guestMode) {
+        const aiResult = await predictPriorityAndStatus({
+          title: payload.title,
+          description: payload.description,
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+        });
 
-      payload.priority = aiResult.priority;
-      payload.status = aiResult.status;
+        payload.priority = aiResult.priority;
+        payload.status = aiResult.status;
 
-      toast.success(`✨ AI Priority: ${aiResult.priority}`);
-      toast.success(`✨ AI Status: ${aiResult.status}`);
+        toast.success(`✨ AI ➔ Priority: ${aiResult.priority.toUpperCase()} | Status: ${aiResult.status.replace('_', ' ')}`);
+      } else {
+        // Guest default fallback
+        if (!payload.priority) payload.priority = 'medium';
+        if (!payload.status) payload.status = 'pending';
+      }
     } catch (err) {
-      console.error('AI prediction fallback:', err.message);
+      console.error('⚠️ AI prediction error:', err.message);
       payload.priority = 'medium';
       payload.status = 'pending';
     }
@@ -82,11 +87,11 @@ const App = () => {
     try {
       await submitTaskAPI({ form: payload, editId, guestMode, getHeaders, setTasks });
       toast.success(editId ? '✅ Task updated' : '🎯 New task added!');
-      fetchTasks();
       resetFormState();
+      fetchTasks();
       setEditId(null);
     } catch (err) {
-      console.error('❌ API submit failed:', err);
+      console.error('❌ API submit failed:', err.message);
       toast.error('Submit failed');
     } finally {
       setLoadingSubmit(false);
@@ -99,7 +104,7 @@ const App = () => {
       toast.success('🗑️ Task deleted');
       fetchTasks();
     } catch (err) {
-      console.error('❌ Delete failed:', err);
+      console.error('❌ Delete failed:', err.message);
       toast.error('Failed to delete');
     }
   };
@@ -225,6 +230,7 @@ const App = () => {
                 handleSubmit={handleSubmit}
                 editId={editId}
                 loading={loadingSubmit}
+                guestMode={guestMode}
               />
             </div>
 

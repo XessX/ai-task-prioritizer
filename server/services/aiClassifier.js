@@ -20,20 +20,22 @@ Analyze:
 - Start Date: "${startDate || 'N/A'}"
 - End Date: "${endDate || 'N/A'}"
 
-Rules:
-✅ Priority:
-- End Date today or tomorrow → "high"
-- Due within 3 days → "medium"
-- Later than 3 days → "low"
-- If text mentions "tomorrow", "now", urgent", "ASAP", "today", "soon" → force "high"
-- If description includes large numbers (>=20) → boost priority by one level
+Rules for Priority:
+- If end date is today or tomorrow → "high"
+- If end date is within 3 days → "medium"
+- If end date is later than 3 days → "low"
+- If text mentions ("urgent", "asap", "now", "today", "soon", "tomorrow") → force "high"
+- If description includes numbers >= 20 → boost priority one level up
 
-✅ Status:
-- If "completed", "submitted", "done" → "completed"
+Rules for Status:
+- If title or description contains ("completed", "submitted", "done", "finished") → "completed"
 - If start date is today or earlier → "in_progress"
 - Else → "pending"
 
-❗ Output ONLY valid clean JSON like:
+Important:
+- Output ONLY valid JSON.
+- No extra explanation.
+Format:
 {
   "priority": "low" | "medium" | "high",
   "status": "pending" | "in_progress" | "completed"
@@ -45,13 +47,16 @@ Rules:
       model: 'gpt-4',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.1,
+      timeout: 10000,
     });
 
     const content = result.choices?.[0]?.message?.content || '';
     const match = content.match(/{[\s\S]*}/);
-    if (!match) throw new Error('Invalid AI JSON output');
+
+    if (!match) throw new Error('Invalid AI output');
 
     const parsed = JSON.parse(match[0]);
+
     return {
       priority: parsed.priority || 'medium',
       status: parsed.status || 'pending',
@@ -59,7 +64,7 @@ Rules:
   } catch (err) {
     console.error('❌ AI fallback triggered:', err.message);
 
-    // 🧠 Improved Fallback
+    // 🧠 Local fallback classification
     let fallbackPriority = 'low';
     let fallbackStatus = 'pending';
 
@@ -72,21 +77,22 @@ Rules:
 
     const text = (title + ' ' + description).toLowerCase();
 
-    // Urgency keywords
-    if (text.includes('urgent') || text.includes('asap') || text.includes('today') || text.includes('soon') || text.includes('tomorrow')) {
+    // Detect urgency
+    const urgencyKeywords = ["urgent", "asap", "now", "today", "soon", "tomorrow"];
+    if (urgencyKeywords.some(word => text.includes(word))) {
       fallbackPriority = 'high';
     }
 
-    // Numbers detected → boost priority
-    const numbers = description.match(/\d+/g)?.map(Number) || [];
-    const largeNumbers = numbers.filter(num => num >= 20);
-    if (largeNumbers.length > 0) {
+    // Detect numbers >= 20 in description
+    const numbers = description?.match(/\d+/g)?.map(Number) || [];
+    if (numbers.some(num => num >= 20)) {
       if (fallbackPriority === 'low') fallbackPriority = 'medium';
       else if (fallbackPriority === 'medium') fallbackPriority = 'high';
     }
 
-    // Status
-    if (text.includes('completed') || text.includes('submitted') || text.includes('done')) {
+    // Determine status
+    const completedKeywords = ["completed", "submitted", "done", "finished"];
+    if (completedKeywords.some(word => text.includes(word))) {
       fallbackStatus = 'completed';
     } else if (start && start <= today) {
       fallbackStatus = 'in_progress';
