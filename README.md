@@ -1,117 +1,151 @@
-🧠 AI Task Prioritizer
+# 🧠 AI Task Prioritizer
 
 AI-powered Task Management App with real-time updates, drag & drop, and OpenAI smart task classification.
 
-📸 Live Demo
+---
 
-[![image.png](https://i.postimg.cc/252THccM/image.png)](https://postimg.cc/qt68qLdx)
+## 📸 Live Demo
 
-Website Preview:
+[![AI Task Prioritizer Screenshot](https://i.postimg.cc/252THccM/image.png)](https://postimg.cc/qt68qLdx)
 
-🚀 Visit Live: https://ai-task-prioritizer.vercel.app/
+🚀 **Visit Live:** [https://ai-task-prioritizer.vercel.app/](https://ai-task-prioritizer.vercel.app/)
 
-✨ Key Features
-🧠 AI Task Priority + Status Prediction (using OpenAI)
+---
 
-🔥 Guest Mode (Use without login)
+## ✨ Key Features
 
-✅ Authentication (Login, Register, Forgot Password)
+- 🧠 **AI Task Priority + Status Prediction** (using OpenAI)
+- 🔥 **Guest Mode** (Use without login)
+- ✅ **Authentication** (Login, Register, Forgot Password)
+- 📦 **Real-time Sync** (Socket.IO)
+- 🌙 **Dark/Light Mode**
+- 🖐️ **Drag & Drop Tasks**
+- 📈 **Task Analytics Dashboard**
+- 📱 **PWA Supported** (Install as App)
 
-📦 Real-time Sync (Socket.IO)
+---
 
-🌙 Dark/Light Mode
+## ⚙️ Tech Stack
 
-🖐️ Drag & Drop Tasks
+| Frontend         | Backend             | AI & Extras          |
+|------------------|---------------------|----------------------|
+| React + Vite     | Node.js + Express    | OpenAI API           |
+| TailwindCSS      | Prisma + PostgreSQL  | Socket.IO            |
+| React Router     | JWT Authentication   | Railway + Vercel Hosting |
+| PWA (Vite Plugin) | Nodemailer (Reset Email) | Real-time Updates  |
 
-📈 Task Analytics Dashboard
+---
 
-📱 PWA Supported (Install as App)
+## 🛠️ Local Development Setup
 
-⚙️ Tech Stack
+### 1. Clone the Repo
 
-Frontend	Backend	AI & Extras
-React + Vite	Node.js + Express	OpenAI API
-TailwindCSS	Prisma + PostgreSQL	Socket.IO
-React Router	JWT Auth	Railway + Vercel Hosting
-PWA (Vite Plugin)	Nodemailer (Reset Email)	Real-time Updates
-
-🛠️ Local Development Setup
-
-1. Clone the Repo
-bash
-
+```bash
 git clone https://github.com/your_username/ai-task-prioritizer.git
 cd ai-task-prioritizer
-2. Backend Setup
-bash
+```
 
+### 2. Backend Setup
+
+```bash
 cd server
 npm install
 npx prisma generate
 npm run dev
-✅ .env file in server/ must have:
+```
 
-env
+✅ `.env` file in `server/` must have:
 
+```env
 DATABASE_URL=your_postgresql_url
 JWT_SECRET=your_super_secret_key
 OPENAI_API_KEY=your_openai_key
-3. Frontend Setup
+```
 
-bash
+---
 
+### 3. Frontend Setup
+
+```bash
 cd ../client
 npm install
 npm run dev
-✅ .env file in client/ must have:
+```
 
-env
+✅ `.env` file in `client/` must have:
 
+```env
 VITE_API_URL=http://localhost:5000/api
 VITE_OPENAI_API_KEY=your_openai_key
 VITE_OPENAI_ENDPOINT=https://api.openai.com/v1/chat/completions
-🌐 Production Deployment (Railway + Vercel)
-Backend ➡️ Railway Hosting
+```
 
-Frontend ➡️ Vercel Hosting
+---
 
-✅ Update .env values on Railway & Vercel properly.
+## 🌐 Production Deployment (Railway + Vercel)
 
-✅ In production useSocket.js, WebSocket URL auto-fixes from http to ws.
+- Backend ➡️ Hosted on **Railway**
+- Frontend ➡️ Hosted on **Vercel**
 
-✅ CORS setup includes localhost and Vercel URL.
+✅ Update `.env` values properly on Railway & Vercel.  
+✅ `useSocket.js` automatically adjusts WebSocket URL (`http → ws`) in production.  
+✅ CORS setup includes localhost and Vercel site URL.
 
-🧠 How AI Prioritization Works
-Predicts Priority (Low / Medium / High) based on:
+---
 
-End date closeness
+## 🧠 How AI Prioritization Works
 
-Urgent words ("urgent", "now", "soon", etc.)
+- **Priority** (Low / Medium / High) based on:
+  - End date closeness
+  - Urgent keywords ("urgent", "now", "soon", "ASAP", "today")
+  - Numbers detected in description (e.g., "50 pages")
 
-Numbers detected in description (e.g., "50 pages")
+- **Status** (Pending / In Progress / Completed) based on:
+  - Start date compared to today
+  - Title/description words like "done", "submitted"
 
-Predicts Status (Pending / In Progress / Completed) based on:
+✅ Fallback logic ensures prediction even if OpenAI fails!
 
-Start date compared to today
+---
 
-Keywords like "done", "submitted"
+## 📈 Analytics Dashboard Inside
 
-Fallback logic guarantees classification even if OpenAI fails.
+- View tasks grouped by:
+  - Priority
+  - Status
+  - Completion rates
 
-📈 Analytics Dashboard Inside using Chartstat
+✨ Using `ChartStats.jsx` inside the project.
 
-📄 License
-MIT License © 2024 — Built with ❤️ by Al_Jubair_Hossain
+---
 
-💬 Need Help?
-Feel free to open an issue if you face any problems!
+## 📄 License
 
-Add "Install App" PWA prompt popup.
+MIT License © 2024 — Built with ❤️ by **Al Jubair Hossain**
 
-🚀 Let's Prioritize Smarter with AI!
-📂 Folder Structure (Optional Section)
-bash
+---
 
+## 💬 Need Help?
+
+Feel free to [open an issue](https://github.com/your_username/ai-task-prioritizer/issues) if you face any problems!
+
+---
+
+## 🛡️ Bonus Features Coming
+
+- Add "**Install App**" PWA prompt.
+- Add Open Graph metadata (better link previews).
+- Add Google Analytics.
+
+---
+
+# 🚀 Let's Prioritize Smarter with AI!
+
+---
+
+## 📂 Folder Structure
+
+```bash
 ai-task-prioritizer/
 ├── server/
 │   ├── prisma/
@@ -132,3 +166,4 @@ ai-task-prioritizer/
 │   └── .env
 ├── README.md
 └── package.json
+```
